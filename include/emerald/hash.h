@@ -1,3 +1,8 @@
+/*
+ * Copyright 2025, Elliot Kohlmyer
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
 #ifndef EMERALD_HASH_H
 #define EMERALD_HASH_H
 

@@ -1,4 +1,8 @@
 /*
+ * Copyright 2025, Elliot Kohlmyer
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * System for tracking object reference counts
  */
 #ifndef EMERALD_REFOBJ_H

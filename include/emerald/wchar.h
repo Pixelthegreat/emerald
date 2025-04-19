@@ -1,4 +1,8 @@
 /*
+ * Copyright 2025, Elliot Kohlmyer
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Emerald wide string manipulation and analysis
  */
 #ifndef EMERALD_WCHAR_H

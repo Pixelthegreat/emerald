@@ -1,4 +1,8 @@
 /*
+ * Copyright 2025, Elliot Kohlmyer
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Shim to keep track of memory allocations
  */
 #ifndef EMERALD_MEMORY_H

@@ -1,4 +1,8 @@
 /*
+ * Copyright 2025, Elliot Kohlmyer
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Utilities for manipulating paths
  *
  * The Emerald path format is very much just like Unix
