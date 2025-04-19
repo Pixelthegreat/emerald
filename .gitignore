@@ -1,0 +1,12 @@
+# build files #
+obj
+lib
+bin
+Makefile
+*.make
+
+# vim #
+**.swp
+
+# personal files #
+notes
