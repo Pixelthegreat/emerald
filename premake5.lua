@@ -18,11 +18,15 @@ filter 'configurations:release'
 
 -- core emerald interpreter --
 project 'emerald'
-	kind 'SharedLib'
 	files {'src/emerald/**.c', 'include/emerald/**.h', 'include/emerald.h'}
 	targetdir 'lib'
 	
 	defines {'EM_LIB'}
+
+	filter 'configurations:debug'
+		kind 'SharedLib'
+	filter 'configurations:release'
+		kind 'StaticLib'
 
 -- emerald shell --
 project 'shell'

@@ -23,7 +23,8 @@ static const char *keywords[] = {
 	"and", "or", "not",
 	"for", "foreach", "while", "to", "in",
 	"let", "include", "puts", "gets", "then", "end", "return", "try", "catch", "raise",
-	"func", "class",
+	"func", "class", "of",
+	"continue", "break",
 };
 #define N_KEYWORDS (sizeof(keywords) / sizeof(const char *))
 
@@ -69,7 +70,7 @@ EM_API void em_lexer_reset(em_lexer_t *lexer, const char *path, const char *text
 		em_token_t *next = cur->next;
 
 		cur->next = NULL;
-		em_refobj_decref(EM_REFOBJ(cur));
+		EM_TOKEN_DECREF(cur);
 
 		cur = next;
 	}
@@ -87,7 +88,7 @@ EM_API void em_lexer_reset(em_lexer_t *lexer, const char *path, const char *text
 /* add token with length specified */
 EM_API em_token_t *em_lexer_add_token_full(em_lexer_t *lexer, em_token_type_t type, em_pos_t *pos, const char *value, size_t len) {
 
-	em_token_t *token = em_token_new(type, pos, value, len);
+	em_token_t *token = EM_TOKEN_INCREF(em_token_new(type, pos, value, len));
 	if (!token) return NULL;
 
 	if (!lexer->first) lexer->first = token;
@@ -188,6 +189,22 @@ EM_API em_result_t em_lexer_make_tokens(em_lexer_t *lexer) {
 			em_pos_advance(&lexer->pos);
 		}
 
+		/* open bracket */
+		else if (lexer->pos.cc == '{') {
+
+			if (!em_lexer_add_token(lexer, EM_TOKEN_TYPE_OPEN_BRACKET, &lexer->pos, "{"))
+				return EM_RESULT_FAILURE;
+			em_pos_advance(&lexer->pos);
+		}
+
+		/* closing bracket */
+		else if (lexer->pos.cc == '}') {
+
+			if (!em_lexer_add_token(lexer, EM_TOKEN_TYPE_CLOSE_BRACKET, &lexer->pos, "}"))
+				return EM_RESULT_FAILURE;
+			em_pos_advance(&lexer->pos);
+		}
+
 		/* open square bracket */
 		else if (lexer->pos.cc == '[') {
 
@@ -216,6 +233,14 @@ EM_API em_result_t em_lexer_make_tokens(em_lexer_t *lexer) {
 		else if (lexer->pos.cc == '.') {
 
 			if (!em_lexer_add_token(lexer, EM_TOKEN_TYPE_DOT, &lexer->pos, "."))
+				return EM_RESULT_FAILURE;
+			em_pos_advance(&lexer->pos);
+		}
+
+		/* colon */
+		else if (lexer->pos.cc == ':') {
+
+			if (!em_lexer_add_token(lexer, EM_TOKEN_TYPE_COLON, &lexer->pos, ":"))
 				return EM_RESULT_FAILURE;
 			em_pos_advance(&lexer->pos);
 		}
@@ -300,7 +325,7 @@ EM_API em_result_t em_lexer_make_tokens(em_lexer_t *lexer) {
 
 			if (lexer->pos.cc != '=') {
 
-				em_log_error(&lexer->pos, "Expected '='");
+				em_log_syntax_error(&lexer->pos, "Expected '='");
 				return EM_RESULT_FAILURE;
 			}
 			em_pos_advance(&lexer->pos);
@@ -339,11 +364,11 @@ EM_API em_result_t em_lexer_make_tokens(em_lexer_t *lexer) {
 			char cc[5];
 			em_ssize_t size = em_utf8_putch(cc, lexer->pos.cc);
 			if (size < 0)
-				em_log_error(&lexer->pos, "Unrecognized character");
+				em_log_syntax_error(&lexer->pos, "Unrecognized character");
 			else {
 				
 				cc[size] = 0;
-				em_log_error(&lexer->pos, "Unrecognized character '%s'", cc);
+				em_log_syntax_error(&lexer->pos, "Unrecognized character '%s'", cc);
 			}
 			return EM_RESULT_FAILURE;
 		}
@@ -372,7 +397,7 @@ EM_API em_result_t em_lexer_make_number(em_lexer_t *lexer) {
 		em_ssize_t chlen = em_utf8_getchlen(lexer->pos.cc);
 		if (chlen < 1 || chlen > 4) {
 
-			em_log_error(&lexer->pos, "Invalid UTF-8 ordinal %d\n", lexer->pos.cc);
+			em_log_syntax_error(&lexer->pos, "Invalid UTF-8 ordinal %d\n", lexer->pos.cc);
 			return EM_RESULT_FAILURE;
 		}
 		len += (size_t)chlen;
@@ -396,7 +421,7 @@ EM_API em_result_t em_lexer_make_identifier(em_lexer_t *lexer) {
 		em_ssize_t chlen = em_utf8_getchlen(lexer->pos.cc);
 		if (chlen < 1 || chlen > 4) {
 
-			em_log_error(&lexer->pos, "Invalid UTF-8 ordinal %d\n", lexer->pos.cc);
+			em_log_syntax_error(&lexer->pos, "Invalid UTF-8 ordinal %d\n", lexer->pos.cc);
 			return EM_RESULT_FAILURE;
 		}
 		len += (size_t)chlen;
@@ -443,7 +468,7 @@ EM_API em_result_t em_lexer_make_string(em_lexer_t *lexer) {
 
 		if (chlen < 1 || chlen > 4) {
 
-			em_log_error(&lexer->pos, "Invalid UTF-8 ordinal %d\n", lexer->pos.cc);
+			em_log_syntax_error(&lexer->pos, "Invalid UTF-8 ordinal %d\n", lexer->pos.cc);
 			return EM_RESULT_FAILURE;
 		}
 		len += (size_t)chlen;
@@ -454,7 +479,7 @@ EM_API em_result_t em_lexer_make_string(em_lexer_t *lexer) {
 	/* expected delimeter */
 	if (lexer->pos.cc != delim) {
 
-		em_log_error(&lexer->pos, "Unexpected end of file");
+		em_log_syntax_error(&lexer->pos, "Unexpected end of file");
 		return EM_RESULT_FAILURE;
 	}
 	em_pos_advance(&lexer->pos);
@@ -478,7 +503,7 @@ EM_API em_result_t em_lexer_make_string(em_lexer_t *lexer) {
 		em_ssize_t chlen = em_utf8_getchlen(ch);
 		if (chlen < 1 || chlen > 4) {
 
-			em_log_error(&vstart, "Invalid UTF-8 ordinal %d\n", ch);
+			em_log_syntax_error(&vstart, "Invalid UTF-8 ordinal %d\n", ch);
 			return EM_RESULT_FAILURE;
 		}
 		if (i+(size_t)chlen > len) break;

@@ -49,6 +49,8 @@ EM_API void em_log_printf(const char *fmt, ...); /* print log message */
 EM_API void em_log_vprintf(const char *fmt, va_list args); /* print log message with va_list */
 EM_API void em_log_end(void); /* end log message */
 
+#define em_log_syntax_error(pos, ...) em_log_raise("SyntaxError", pos, __VA_ARGS__)
+
 #define em_log_info(...) em_log(EM_LOG_LEVEL_INFO, __FILE__, __LINE__, __VA_ARGS__)
 #define em_log_warning(...) em_log(EM_LOG_LEVEL_WARNING, __FILE__, __LINE__, __VA_ARGS__)
 #define em_log_fatal(...) em_log(EM_LOG_LEVEL_FATAL, __FILE__, __LINE__, __VA_ARGS__)

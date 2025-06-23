@@ -67,7 +67,7 @@ EM_API void em_pos_advance(em_pos_t *pos) {
 		pos->lstart = (pos->lstart < 0)? 0: pos->index+1;
 		em_ssize_t i = pos->lstart;
 
-		while (((i < pos->len)? pos->text[i]: '\n') != '\n')
+		while (i < pos->len && pos->text[i] != '\n')
 			i++;
 		pos->lend = i;
 	}
@@ -108,7 +108,10 @@ EM_API void em_log_verror(const em_pos_t *pos, const char *fmt, va_list args) {
 
 	if (pos && pos->text && pos->lstart >= 0 && pos->lend >= 0) {
 
-		strncpy(linebuf, pos->text+pos->lstart, (size_t)EM_MIN(pos->lend, LINEBUFSZ));
+		size_t len = (size_t)EM_MIN(pos->lend-pos->lstart, LINEBUFSZ-1);
+		memcpy(linebuf, pos->text+pos->lstart, len);
+		linebuf[len] = 0;
+
 		em_log_printf("\n -> %s", linebuf);
 	}
 

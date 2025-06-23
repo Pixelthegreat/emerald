@@ -190,7 +190,6 @@ EM_API em_refobj_t *em_refobj_new_full(em_reflist_t *list, size_t size, em_clean
 	em_refobj_t *obj = EM_REFOBJ(em_allocate(size, file, line));
 	memset(obj, 0, size);
 
-	obj->refcnt++;
 	em_reflist_add(list, obj);
 
 	obj->mode = mode;

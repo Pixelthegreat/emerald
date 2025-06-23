@@ -29,11 +29,14 @@ typedef enum em_token_type {
 	EM_TOKEN_TYPE_SLASH,
 	EM_TOKEN_TYPE_OPEN_PAREN,
 	EM_TOKEN_TYPE_CLOSE_PAREN,
+	EM_TOKEN_TYPE_OPEN_BRACKET,
+	EM_TOKEN_TYPE_CLOSE_BRACKET,
 	EM_TOKEN_TYPE_OPEN_SQUARE_BRACKET,
 	EM_TOKEN_TYPE_CLOSE_SQUARE_BRACKET,
 	EM_TOKEN_TYPE_COMMA,
 	EM_TOKEN_TYPE_DOT,
 	EM_TOKEN_TYPE_EQUALS,
+	EM_TOKEN_TYPE_COLON,
 	EM_TOKEN_TYPE_LESS_THAN,
 	EM_TOKEN_TYPE_GREATER_THAN,
 	
@@ -65,10 +68,14 @@ typedef struct em_token {
 
 EM_API em_reflist_t em_reflist_token;
 
+#define EM_TOKEN_INCREF(p) EM_TOKEN(em_refobj_incref(EM_REFOBJ(p)))
+#define EM_TOKEN_DECREF(p) em_refobj_decref(EM_REFOBJ(p))
+
 /* functions */
 EM_API const char *em_get_token_type_name(em_token_type_t type); /* get name of token type */
 
 EM_API em_token_t *em_token_new(em_token_type_t type, em_pos_t *pos, const char *value, size_t len); /* create token */
+EM_API em_bool_t em_token_matches(em_token_t *token, em_token_type_t type, const char *value); /* check if token matches type and value */
 EM_API void em_token_print(em_token_t *token); /* print token list (debug) */
 
 #endif /* EMERALD_TOKEN_H */

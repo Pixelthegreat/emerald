@@ -8,6 +8,7 @@
 
 #include <emerald/core.h>
 #include <emerald/lexer.h>
+#include <emerald/parser.h>
 
 /* context */
 #define EM_CONTEXT_MAX_DIRS 32
@@ -20,6 +21,7 @@ typedef struct em_recfile {
 typedef struct em_context {
 	em_bool_t init; /* initialized */
 	em_lexer_t lexer; /* local lexer */
+	em_parser_t parser; /* local parser */
 	const char *dirstack[EM_CONTEXT_MAX_DIRS]; /* directory stack */
 	size_t ndirstack; /* number of directories in stack */
 	em_recfile_t *rec_first; /* first run file */

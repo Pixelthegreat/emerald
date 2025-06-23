@@ -44,7 +44,7 @@ static struct mlist *first = NULL;
 static struct mlist *last = NULL;
 
 /* track allocation */
-EM_API void *track_alloc(size_t size, const char *file, em_ssize_t line) {
+static void *track_alloc(size_t size, const char *file, em_ssize_t line) {
 
 	em_hash_t hash = em_utf8_strhash(file);
 
@@ -90,8 +90,30 @@ EM_API void *track_alloc(size_t size, const char *file, em_ssize_t line) {
 	return (void *)(blk + 1);
 }
 
+/* track reallocation; necessary to readjust the allocation list */
+static void *track_realloc(void *p, size_t size) {
+
+	if (!p) return NULL;
+
+	struct mblk *blk = (struct mblk *)p - 1;
+	struct mblk *oblk = blk;
+
+	blk = realloc(blk, sizeof(struct mblk) + size);
+	if (!blk) return NULL;
+
+	blk->size = size;
+
+	/* update links */
+	if (blk->prev) blk->prev->next = blk;
+	if (blk->next) blk->next->prev = blk;
+	if (blk->list->first == oblk) blk->list->first = blk;
+	if (blk->list->last == oblk) blk->list->last = blk;
+
+	return (void *)(blk + 1);
+}
+
 /* track free */
-EM_API void track_free(void *p) {
+static void track_free(void *p) {
 
 	if (!p) return;
 
@@ -118,6 +140,14 @@ EM_API void *em_allocate(size_t size, const char *file, em_ssize_t line) {
 	nalloc++;
 	ntotal++;
 	return p;
+}
+
+/* reallocate memory */
+EM_API void *em_realloc(void *p, size_t size) {
+
+	if (!p) return NULL;
+
+	return em_track_allocations? track_realloc(p, size): realloc(p, size);
 }
 
 /* free memory */

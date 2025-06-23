@@ -87,6 +87,7 @@ static void repl(void) {
 
 		/* run line */
 		(void)em_context_run_text(&context, "<stdin>", shbuf, len);
+		if (em_log_catch(NULL)) em_log_flush();
 	}
 }
 

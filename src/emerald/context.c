@@ -43,7 +43,12 @@ EM_API em_result_t em_context_init(em_context_t *context) {
 		return EM_RESULT_FAILURE;
 	}
 
+	context->lexer = EM_LEXER_INIT;
+	context->parser = EM_PARSER_INIT;
+
 	if (em_lexer_init(&context->lexer) != EM_RESULT_SUCCESS)
+		return EM_RESULT_FAILURE;
+	if (em_parser_init(&context->parser) != EM_RESULT_SUCCESS)
 		return EM_RESULT_FAILURE;
 
 	/* set up initial directory stack */
@@ -69,12 +74,11 @@ EM_API em_result_t em_context_run_text(em_context_t *context, const char *path, 
 	if (em_lexer_make_tokens(&context->lexer) != EM_RESULT_SUCCESS)
 		return EM_RESULT_FAILURE;
 
-	em_token_t *cur = context->lexer.first;
-	while (cur) {
+	em_parser_reset(&context->parser, context->lexer.first);
+	if (em_parser_parse(&context->parser) != EM_RESULT_SUCCESS)
+		return EM_RESULT_FAILURE;
 
-		printf("%s:'%s' (Line %ld, Column %ld)\n", em_get_token_type_name(cur->type), cur->value, cur->pos.line, cur->pos.column);
-		cur = cur->next;
-	}
+	em_node_print(context->parser.node);
 }
 
 /* push directory to stack */
@@ -229,6 +233,7 @@ EM_API void em_context_destroy(em_context_t *context) {
 		recfile = next;
 	}
 
+	em_parser_destroy(&context->parser);
 	em_lexer_destroy(&context->lexer);
 	context->init = EM_FALSE;
 }

@@ -24,11 +24,14 @@ static const char *typenames[EM_TOKEN_TYPE_COUNT] = {
 	"SLASH",
 	"OPEN_PAREN",
 	"CLOSE_PAREN",
+	"OPEN_BRACKET",
+	"CLOSE_BRACKET",
 	"OPEN_SQUARE_BRACKET",
 	"CLOSE_SQUARE_BRACKET",
 	"COMMA",
 	"DOT",
 	"EQUALS",
+	"COLON",
 	"LESS_THAN",
 	"GREATER_THAN",
 	"DOUBLE_EQUALS",
@@ -64,6 +67,12 @@ EM_API em_token_t *em_token_new(em_token_type_t type, em_pos_t *pos, const char 
 	token->value[len] = 0;
 
 	return token;
+}
+
+/* check if token matches type and value */
+EM_API em_bool_t em_token_matches(em_token_t *token, em_token_type_t type, const char *value) {
+
+	return (em_bool_t)(token->type == type && !strcmp(token->value, value));
 }
 
 /* print token list (debug) */

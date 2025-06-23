@@ -52,6 +52,10 @@ typedef uint32_t em_hash_t;
 #define EM_HASH_MAX UINT32_MAX
 #define EM_HASH_BITS 32
 
+/* a type for use by integers within the scope of the language */
+typedef long em_inttype_t;
+#define EM_INTTYPE_MAX LONG_MAX
+
 /* an absurd concept: uint24_t */
 typedef struct em_uint24 {
 	uint8_t a, b, c;

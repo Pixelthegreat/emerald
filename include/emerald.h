@@ -1,4 +1,8 @@
 /*
+ * Copyright 2025, Elliot Kohlmyer
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Convenience header
  */
 #ifndef EMERALD_H
@@ -16,5 +20,7 @@
 #include <emerald/context.h>
 #include <emerald/token.h>
 #include <emerald/lexer.h>
+#include <emerald/node.h>
+#include <emerald/parser.h>
 
 #endif /* EMERALD_H */
