@@ -8,6 +8,7 @@
 #include <string.h>
 #include <emerald/core.h>
 #include <emerald/wchar.h>
+#include <emerald/hash.h>
 #include <emerald/string.h>
 
 #define INVALID_OPERATION ({\
@@ -20,6 +21,7 @@ static em_value_t is_true(em_value_t v, em_pos_t *pos);
 static em_value_t add(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t multiply(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t compare_equal(em_value_t a, em_value_t b, em_pos_t *pos);
+static em_hash_t hash(em_value_t v, em_pos_t *pos);
 static em_value_t to_string(em_value_t v, em_pos_t *pos);
 
 static em_object_type_t type = {
@@ -27,6 +29,7 @@ static em_object_type_t type = {
 	.add = add,
 	.multiply = multiply,
 	.compare_equal = compare_equal,
+	.hash = hash,
 	.to_string = to_string,
 };
 
@@ -55,6 +58,7 @@ static em_value_t add(em_value_t a, em_value_t b, em_pos_t *pos) {
 	memcpy(string->data + first->length, second->data, second->length * sizeof(em_wchar_t));
 	string->data[string->length] = EM_INT2WC(0);
 
+	string->hash = em_wchar_strhash(string->data);
 	return result;
 }
 
@@ -80,6 +84,7 @@ static em_value_t multiply(em_value_t a, em_value_t b, em_pos_t *pos) {
 		memcpy(new->data + (size_t)i * string->length, string->data, string->length * sizeof(em_wchar_t));
 	new->data[new->length] = EM_INT2WC(0);
 
+	new->hash = em_wchar_strhash(new->data);
 	return result;
 }
 
@@ -94,6 +99,13 @@ static em_value_t compare_equal(em_value_t a, em_value_t b, em_pos_t *pos) {
 		return EM_VALUE_FALSE;
 
 	return !memcmp(first->data, second->data, first->length)? EM_VALUE_TRUE: EM_VALUE_FALSE;
+}
+
+/* get hash value */
+static em_hash_t hash(em_value_t v, em_pos_t *pos) {
+
+	em_string_t *string = EM_STRING(EM_OBJECT_FROM_VALUE(v));
+	return string->hash;
 }
 
 /* get string representation */
@@ -124,6 +136,7 @@ EM_API em_value_t em_string_new_from_utf8(const char *data, size_t length) {
 	em_wchar_from_utf8(string->data, length+1, data);
 	string->data[length] = EM_INT2WC(0);
 
+	string->hash = em_wchar_strhash(string->data);
 	return value;
 }
 
@@ -136,5 +149,6 @@ EM_API em_value_t em_string_new_from_wchar(const em_wchar_t *data, size_t length
 	memcpy(string->data, data, length * sizeof(em_wchar_t));
 	string->data[length] = EM_INT2WC(0);
 
+	string->hash = em_wchar_strhash(string->data);
 	return value;
 }

@@ -26,6 +26,11 @@ typedef struct em_object_type {
 	em_value_t (*compare_equal)(em_value_t, em_value_t, em_pos_t *);
 	em_value_t (*compare_less_than)(em_value_t, em_value_t, em_pos_t *);
 	em_value_t (*compare_greater_than)(em_value_t, em_value_t, em_pos_t *);
+	em_hash_t (*hash)(em_value_t, em_pos_t *);
+	em_value_t (*get_by_hash)(em_value_t, em_hash_t, em_pos_t *);
+	em_value_t (*get_by_index)(em_value_t, em_value_t, em_pos_t *);
+	em_result_t (*set_by_hash)(em_value_t, em_hash_t, em_value_t, em_pos_t *);
+	em_result_t (*set_by_index)(em_value_t, em_value_t, em_value_t, em_pos_t *);
 	em_value_t (*to_string)(em_value_t, em_pos_t *);
 } em_object_type_t;
 
@@ -59,6 +64,11 @@ EM_API em_value_t em_object_shift_right(em_value_t a, em_value_t b, em_pos_t *po
 EM_API em_value_t em_object_compare_equal(em_value_t a, em_value_t b, em_pos_t *pos); /* compare if objects are equal */
 EM_API em_value_t em_object_compare_less_than(em_value_t a, em_value_t b, em_pos_t *pos); /* compare if object is less than other */
 EM_API em_value_t em_object_compare_greater_than(em_value_t a, em_value_t b, em_pos_t *pos); /* compare if object is greater than other */
+EM_API em_hash_t em_object_hash(em_value_t v, em_pos_t *pos); /* get hash value of object */
+EM_API em_value_t em_object_get_by_hash(em_value_t v, em_hash_t hash, em_pos_t *pos); /* get value by key hash */
+EM_API em_value_t em_object_get_by_index(em_value_t v, em_value_t i, em_pos_t *pos); /* get value by index */
+EM_API em_result_t em_object_set_by_hash(em_value_t a, em_hash_t hash, em_value_t b, em_pos_t *pos); /* set value by key hash */
+EM_API em_result_t em_object_set_by_index(em_value_t a, em_value_t i, em_value_t b, em_pos_t *pos); /* set value by index */
 EM_API em_value_t em_object_to_string(em_value_t v, em_pos_t *pos); /* get string representation of object */
 
 #endif /* EMERALD_OBJECT_H */

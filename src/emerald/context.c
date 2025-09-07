@@ -9,9 +9,12 @@
 #include <errno.h>
 #include <emerald/core.h>
 #include <emerald/memory.h>
+#include <emerald/utf8.h>
 #include <emerald/wchar.h>
+#include <emerald/hash.h>
 #include <emerald/path.h>
 #include <emerald/string.h>
+#include <emerald/map.h>
 #include <emerald/context.h>
 
 /* visitors */
@@ -20,8 +23,11 @@ static em_value_t (*visitors[EM_NODE_TYPE_COUNT])(em_context_t *, em_node_t *) =
 	[EM_NODE_TYPE_INT] = em_context_visit_int,
 	[EM_NODE_TYPE_FLOAT] = em_context_visit_float,
 	[EM_NODE_TYPE_STRING] = em_context_visit_string,
+	[EM_NODE_TYPE_IDENTIFIER] = em_context_visit_identifier,
+	[EM_NODE_TYPE_ACCESS] = em_context_visit_access,
 	[EM_NODE_TYPE_UNARY_OPERATION] = em_context_visit_unary_operation,
 	[EM_NODE_TYPE_BINARY_OPERATION] = em_context_visit_binary_operation,
+	[EM_NODE_TYPE_LET] = em_context_visit_let,
 };
 
 /* NOTE: Always leave pathbuf1 for reuse, even if used previously */
@@ -69,6 +75,9 @@ EM_API em_result_t em_context_init(em_context_t *context) {
 	context->ndirstack++;
 	context->dirstack[1] = EM_STDLIB_DIR;
 #endif
+	context->nscopestack = 1;
+	context->scopestack[0] = em_map_new();
+	em_value_incref(context->scopestack[0]);
 	context->rec_first = NULL;
 	context->rec_last = NULL;
 
@@ -142,6 +151,61 @@ EM_API const char *em_context_popdir(em_context_t *context) {
 	}
 
 	return context->dirstack[--context->ndirstack];
+}
+
+/* push scope to stack */
+EM_API em_result_t em_context_push_scope(em_context_t *context) {
+
+	if (!context || !context->init) return EM_RESULT_FAILURE;
+
+	/* no space */
+	if (context->nscopestack >= EM_CONTEXT_MAX_SCOPE) {
+
+		em_log_fatal("Reached scope stack limit");
+		return EM_RESULT_FAILURE;
+	}
+
+	em_value_t map = em_map_new();
+	em_value_incref(map);
+
+	context->scopestack[context->nscopestack++] = map;
+}
+
+/* pop scope from stack */
+EM_API void em_context_pop_scope(em_context_t *context) {
+
+	if (!context || !context->init) return;
+
+	/* already at bottom */
+	if (!context->nscopestack) {
+
+		em_log_warning("Reached bottom of scope stack");
+		return;
+	}
+
+	em_value_t map = context->scopestack[--context->nscopestack];
+	em_value_decref(map);
+}
+
+/* set value in current scope */
+EM_API void em_context_set_value(em_context_t *context, em_hash_t key, em_value_t value) {
+
+	if (!context || !context->init || !context->nscopestack) return;
+
+	em_value_t map = context->scopestack[context->nscopestack-1];
+	em_map_set(map, key, value);
+}
+
+/* get value from current scope */
+EM_API em_value_t em_context_get_value(em_context_t *context, em_hash_t key) {
+
+	if (!context || !context->init || !context->nscopestack) return EM_VALUE_FAIL;
+	for (size_t i = context->nscopestack; i > 0; i--) {
+
+		em_value_t value = em_map_get(context->scopestack[i-1], key);
+		if (EM_VALUE_OK(value)) return value;
+	}
+	return EM_VALUE_FAIL;
 }
 
 /* run code from file */
@@ -287,6 +351,59 @@ EM_API em_value_t em_context_visit_string(em_context_t *context, em_node_t *node
 	return em_string_new_from_utf8(token->value, strlen(token->value));
 }
 
+/* visit identifier */
+EM_API em_value_t em_context_visit_identifier(em_context_t *context, em_node_t *node) {
+
+	em_token_t *token = em_node_get_token(node, 0);
+
+	em_hash_t key = em_utf8_strhash(token->value);
+	em_value_t value = em_context_get_value(context, key);
+
+	if (!EM_VALUE_OK(value)) {
+
+		em_log_runtime_error(&node->pos, "Variable '%s' not defined", token->value);
+		return EM_VALUE_FAIL;
+	}
+	return value;
+}
+
+/* visit member access */
+EM_API em_value_t em_context_visit_access(em_context_t *context, em_node_t *node) {
+
+	em_node_t *container_node = node->first;
+	em_token_t *name_token = em_node_get_token(node, 0);
+	em_node_t *index_node = container_node->next;
+
+	em_value_t container = em_context_visit(context, container_node);
+	if (!EM_VALUE_OK(container)) return EM_VALUE_FAIL;
+
+	em_value_t value = EM_VALUE_FAIL, index = EM_VALUE_FAIL;
+	if (index_node) {
+
+		index = em_context_visit(context, index_node);
+		if (!EM_VALUE_OK(index)) {
+
+			em_value_delete(container);
+			return EM_VALUE_FAIL;
+		}
+		value = em_value_get_by_index(container, index, &node->pos);
+
+		if (!EM_VALUE_OK(value) && !em_log_catch(NULL))
+			em_log_runtime_error(&node->pos, "Invalid index");
+	}
+	else {
+
+		em_hash_t hash = em_utf8_strhash(name_token->value);
+		value = em_value_get_by_hash(container, hash, &node->pos);
+
+		if (!EM_VALUE_OK(value) && !em_log_catch(NULL))
+			em_log_runtime_error(&node->pos, "Attribute '%s' not defined", name_token->value);
+	}
+
+	em_value_delete(index);
+	return value;
+}
+
 /* visit unary operation */
 EM_API em_value_t em_context_visit_unary_operation(em_context_t *context, em_node_t *node) {
 
@@ -374,10 +491,91 @@ EM_API em_value_t em_context_visit_binary_operation(em_context_t *context, em_no
 	return result;
 }
 
+/* visit let statement */
+EM_API em_value_t em_context_visit_let(em_context_t *context, em_node_t *node) {
+
+	em_node_t *index_node = node->first;
+	em_node_t *value_node = index_node->next;
+
+	if (!value_node) {
+
+		value_node = index_node;
+		index_node = NULL;
+	}
+
+	em_value_t value = em_context_visit(context, value_node);
+	if (!EM_VALUE_OK(value)) return EM_VALUE_FAIL;
+
+	em_value_t index = EM_VALUE_FAIL;
+	if (index_node) {
+
+		index = em_context_visit(context, index_node);
+		if (!EM_VALUE_OK(index)) {
+
+			em_value_delete(value);
+			return EM_VALUE_FAIL;
+		}
+	}
+
+	/* resolve names up until the last name, or including the last name if an index is provided */
+	size_t ntokens = node->tokens.nitems;
+
+	em_value_t container = context->scopestack[context->nscopestack-1];
+	const char *prevname = NULL;
+	for (size_t i = 0; i < (index_node? ntokens: ntokens-1); i++) {
+
+		em_token_t *token = em_node_get_token(node, i);
+		em_hash_t hash = em_utf8_strhash(token->value);
+
+		container = em_value_get_by_hash(container, hash, &token->pos);
+		if (!EM_VALUE_OK(container)) {
+
+			if (!em_log_catch(NULL)) {
+
+				if (prevname) em_log_runtime_error(&token->pos, "Attribute '%s' not defined", token->value);
+				else em_log_runtime_error(&token->pos, "Variable '%s' not defined", token->value);
+			}
+
+			em_value_delete(index);
+			em_value_delete(value);
+			return EM_VALUE_FAIL;
+		}
+		prevname = token->value;
+	}
+	em_token_t *name_token = em_node_get_token(node, ntokens-1);
+
+	/* set value */
+	if (index_node) {
+
+		if (em_value_set_by_index(container, index, value, &node->pos) != EM_RESULT_SUCCESS) {
+
+			em_value_delete(index);
+			em_value_delete(value);
+			return EM_VALUE_FAIL;
+		}
+	}
+	else {
+
+		em_hash_t hash = em_utf8_strhash(name_token->value);
+		if (em_value_set_by_hash(container, hash, value, &node->pos) != EM_RESULT_SUCCESS) {
+
+			em_value_delete(index);
+			em_value_delete(value);
+			return EM_VALUE_FAIL;
+		}
+	}
+
+	em_value_delete(index);
+	return value;
+}
+
 /* destroy context */
 EM_API void em_context_destroy(em_context_t *context) {
 
 	if (!context || !context->init) return;
+
+	for (size_t i = 0; i < context->nscopestack; i++)
+		em_value_decref(context->scopestack[i]);
 
 	em_recfile_t *recfile = context->rec_first;
 	while (recfile) {

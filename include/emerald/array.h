@@ -12,7 +12,7 @@
 
 /* generic value types */
 /*  (t|te)_[c,u]type[p]
- *   t  - libc type
+ *   t  - c99 type
  *   te - emerald type
  *   c  - const
  *   u  - unsigned

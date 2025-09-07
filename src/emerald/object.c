@@ -9,10 +9,11 @@
 #include <emerald/string.h>
 #include <emerald/object.h>
 
-#define INVALID_OPERATION ({\
+#define INVALID_OPERATION_RETURN(retv) ({\
 		em_log_runtime_error(pos, "Invalid operation");\
-		return EM_VALUE_FAIL;\
+		return retv;\
 	})
+#define INVALID_OPERATION INVALID_OPERATION_RETURN(EM_VALUE_FAIL)
 
 /* create object */
 EM_API em_value_t em_object_new(em_object_type_t *type, size_t size) {
@@ -152,6 +153,51 @@ EM_API em_value_t em_object_compare_greater_than(em_value_t a, em_value_t b, em_
 	if (!object->type->compare_greater_than) INVALID_OPERATION;
 
 	return object->type->compare_greater_than(a, b, pos);
+}
+
+/* get hash value of object */
+EM_API em_hash_t em_object_hash(em_value_t v, em_pos_t *pos) {
+
+	em_object_t *object = EM_OBJECT_FROM_VALUE(v);
+	if (!object->type->hash) return 0;
+
+	return object->type->hash(v, pos);
+}
+
+/* get value by key hash */
+EM_API em_value_t em_object_get_by_hash(em_value_t v, em_hash_t hash, em_pos_t *pos) {
+
+	em_object_t *object = EM_OBJECT_FROM_VALUE(v);
+	if (!object->type->get_by_hash) INVALID_OPERATION;
+
+	return object->type->get_by_hash(v, hash, pos);
+}
+
+/* get value by index */
+EM_API em_value_t em_object_get_by_index(em_value_t v, em_value_t i, em_pos_t *pos) {
+
+	em_object_t *object = EM_OBJECT_FROM_VALUE(v);
+	if (!object->type->get_by_index) INVALID_OPERATION;
+
+	return object->type->get_by_index(v, i, pos);
+}
+
+/* set value by key hash */
+EM_API em_result_t em_object_set_by_hash(em_value_t a, em_hash_t hash, em_value_t b, em_pos_t *pos) {
+
+	em_object_t *object = EM_OBJECT_FROM_VALUE(a);
+	if (!object->type->set_by_hash) INVALID_OPERATION_RETURN(EM_RESULT_FAILURE);
+
+	return object->type->set_by_hash(a, hash, b, pos);
+}
+
+/* set value by index */
+EM_API em_result_t em_object_set_by_index(em_value_t a, em_value_t i, em_value_t b, em_pos_t *pos) {
+
+	em_object_t *object = EM_OBJECT_FROM_VALUE(a);
+	if (!object->type->set_by_index) INVALID_OPERATION_RETURN(EM_RESULT_FAILURE);
+
+	return object->type->set_by_index(a, i, b, pos);
 }
 
 /* get string representation of object */

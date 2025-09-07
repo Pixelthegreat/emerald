@@ -56,6 +56,11 @@ EM_API em_value_t em_value_compare_less_than(em_value_t a, em_value_t b, em_pos_
 EM_API em_value_t em_value_compare_greater_than(em_value_t a, em_value_t b, em_pos_t *pos); /* compare if value is greater than other */
 EM_API em_value_t em_value_compare_or(em_value_t a, em_value_t b, em_pos_t *pos); /* or truthiness of values */
 EM_API em_value_t em_value_compare_and(em_value_t a, em_value_t b, em_pos_t *pos); /* and truthiness of values */
+EM_API em_hash_t em_value_hash(em_value_t v, em_pos_t *pos); /* get hash value */
+EM_API em_value_t em_value_get_by_hash(em_value_t v, em_hash_t hash, em_pos_t *pos); /* get value by key hash */
+EM_API em_value_t em_value_get_by_index(em_value_t v, em_value_t i, em_pos_t *pos); /* get value by index value */
+EM_API em_result_t em_value_set_by_hash(em_value_t a, em_hash_t hash, em_value_t b, em_pos_t *pos); /* set value by key hash */
+EM_API em_result_t em_value_set_by_index(em_value_t a, em_value_t i, em_value_t b, em_pos_t *pos); /* set value by index */
 EM_API void em_value_log(em_value_t v); /* log value */
 
 #endif /* EMERALD_VALUE_H */

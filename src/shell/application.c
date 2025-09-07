@@ -125,6 +125,12 @@ EM_API em_result_t shell_application_run(int argc, const char **argv) {
 	if (em_context_init(&context) != EM_RESULT_SUCCESS)
 		return EM_RESULT_FAILURE;
 
+	em_value_t map = em_map_new();
+	em_map_set(map, em_utf8_strhash("a"), EM_VALUE_INT(10));
+	em_map_set(map, em_utf8_strhash("b"), EM_VALUE_INT(11));
+
+	em_context_set_value(&context, em_utf8_strhash("x"), map);
+
 	/* interpret file or stdin */
 	if (!arg_filename) repl();
 	else {

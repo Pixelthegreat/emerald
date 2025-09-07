@@ -11,10 +11,11 @@
 #include <emerald/string.h>
 #include <emerald/value.h>
 
-#define INVALID_OPERATION ({\
+#define INVALID_OPERATION_RETURN(retv) ({\
 		em_log_runtime_error(pos, "Invalid operation");\
-		return EM_VALUE_FAIL;\
+		return retv;\
 	})
+#define INVALID_OPERATION INVALID_OPERATION_RETURN(EM_VALUE_FAIL)
 
 /* operations */
 static em_value_t is_true_int(em_value_t v, em_pos_t *pos);
@@ -29,6 +30,7 @@ static em_value_t shift_right_int(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t compare_equal_int(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t compare_less_than_int(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t compare_greater_than_int(em_value_t a, em_value_t b, em_pos_t *pos);
+static em_hash_t hash_int(em_value_t v, em_pos_t *pos);
 
 static em_value_t is_true_float(em_value_t v, em_pos_t *pos);
 static em_value_t add_float(em_value_t a, em_value_t b, em_pos_t *pos);
@@ -38,6 +40,7 @@ static em_value_t divide_float(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t compare_equal_float(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t compare_less_than_float(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t compare_greater_than_float(em_value_t a, em_value_t b, em_pos_t *pos);
+static em_hash_t hash_float(em_value_t v, em_pos_t *pos);
 
 struct {
 	em_value_t (*is_true)(em_value_t, em_pos_t *);
@@ -52,6 +55,11 @@ struct {
 	em_value_t (*compare_equal)(em_value_t, em_value_t, em_pos_t *);
 	em_value_t (*compare_less_than)(em_value_t, em_value_t, em_pos_t *);
 	em_value_t (*compare_greater_than)(em_value_t, em_value_t, em_pos_t *);
+	em_hash_t (*hash)(em_value_t, em_pos_t *);
+	em_value_t (*get_by_hash)(em_value_t, em_hash_t, em_pos_t *);
+	em_value_t (*get_by_index)(em_value_t, em_value_t, em_pos_t *);
+	em_result_t (*set_by_hash)(em_value_t, em_hash_t, em_value_t, em_pos_t *);
+	em_result_t (*set_by_index)(em_value_t, em_value_t, em_value_t, em_pos_t *);
 
 } ops[EM_VALUE_TYPE_COUNT] = {
 	[EM_VALUE_TYPE_INT] = {
@@ -67,6 +75,7 @@ struct {
 		.compare_equal = compare_equal_int,
 		.compare_less_than = compare_less_than_int,
 		.compare_greater_than = compare_greater_than_int,
+		.hash = hash_int,
 	},
 	[EM_VALUE_TYPE_FLOAT] = {
 		.is_true = is_true_float,
@@ -77,6 +86,7 @@ struct {
 		.compare_equal = compare_equal_float,
 		.compare_less_than = compare_less_than_float,
 		.compare_greater_than = compare_greater_than_float,
+		.hash = hash_float,
 	},
 	[EM_VALUE_TYPE_OBJECT] = {
 		.is_true = em_object_is_true,
@@ -91,6 +101,11 @@ struct {
 		.compare_equal = em_object_compare_equal,
 		.compare_less_than = em_object_compare_less_than,
 		.compare_greater_than = em_object_compare_greater_than,
+		.hash = em_object_hash,
+		.get_by_hash = em_object_get_by_hash,
+		.get_by_index = em_object_get_by_index,
+		.set_by_hash = em_object_set_by_hash,
+		.set_by_index = em_object_set_by_index,
 	},
 };
 
@@ -223,6 +238,12 @@ static em_value_t compare_greater_than_int(em_value_t a, em_value_t b, em_pos_t 
 	}
 }
 
+/* hash integer */
+static em_hash_t hash_int(em_value_t v, em_pos_t *pos) {
+
+	return (em_hash_t)v.value.te_inttype;
+}
+
 /* is float true */
 static em_value_t is_true_float(em_value_t v, em_pos_t *pos) {
 
@@ -320,6 +341,12 @@ static em_value_t compare_greater_than_float(em_value_t a, em_value_t b, em_pos_
 	}
 }
 
+/* hash float */
+static em_hash_t hash_float(em_value_t v, em_pos_t *pos) {
+
+	return *(em_hash_t *)&v.value.te_floattype;
+}
+
 /* increase reference count */
 EM_API void em_value_incref(em_value_t v) {
 
@@ -415,19 +442,25 @@ EM_API em_value_t em_value_shift_right(em_value_t a, em_value_t b, em_pos_t *pos
 /* compare if values are equal */
 EM_API em_value_t em_value_compare_equal(em_value_t a, em_value_t b, em_pos_t *pos) {
 
-	return ops[a.type].compare_equal(a, b, pos);
+	if (ops[a.type].compare_equal) return ops[a.type].compare_equal(a, b, pos);
+
+	return EM_VALUE_FALSE;
 }
 
 /* compare if value is less than other */
 EM_API em_value_t em_value_compare_less_than(em_value_t a, em_value_t b, em_pos_t *pos) {
 
-	return ops[a.type].compare_less_than(a, b, pos);
+	if (ops[a.type].compare_less_than) return ops[a.type].compare_less_than(a, b, pos);
+
+	INVALID_OPERATION;
 }
 
 /* compare if value is greater than other */
 EM_API em_value_t em_value_compare_greater_than(em_value_t a, em_value_t b, em_pos_t *pos) {
 
-	return ops[a.type].compare_greater_than(a, b, pos);
+	if (ops[a.type].compare_greater_than) return ops[a.type].compare_greater_than(a, b, pos);
+
+	INVALID_OPERATION;
 }
 
 /* or truthiness of values */
@@ -440,6 +473,46 @@ EM_API em_value_t em_value_compare_or(em_value_t a, em_value_t b, em_pos_t *pos)
 EM_API em_value_t em_value_compare_and(em_value_t a, em_value_t b, em_pos_t *pos) {
 
 	return EM_VALUE_INT(ops[a.type].is_true(a, pos).value.te_inttype && ops[b.type].is_true(b, pos).value.te_inttype);
+}
+
+/* get hash value */
+EM_API em_hash_t em_value_hash(em_value_t v, em_pos_t *pos) {
+
+	if (ops[v.type].hash) return ops[v.type].hash(v, pos);
+
+	return 0;
+}
+
+/* get value by key hash */
+EM_API em_value_t em_value_get_by_hash(em_value_t v, em_hash_t hash, em_pos_t *pos) {
+
+	if (ops[v.type].get_by_hash) return ops[v.type].get_by_hash(v, hash, pos);
+
+	INVALID_OPERATION;
+}
+
+/* get value by index value */
+EM_API em_value_t em_value_get_by_index(em_value_t v, em_value_t i, em_pos_t *pos) {
+
+	if (ops[v.type].get_by_index) return ops[v.type].get_by_index(v, i, pos);
+
+	INVALID_OPERATION;
+}
+
+/* set value by key hash */
+EM_API em_result_t em_value_set_by_hash(em_value_t a, em_hash_t hash, em_value_t b, em_pos_t *pos) {
+
+	if (ops[a.type].set_by_hash) return ops[a.type].set_by_hash(a, hash, b, pos);
+
+	INVALID_OPERATION_RETURN(EM_RESULT_FAILURE);
+}
+
+/* set value by index */
+EM_API em_result_t em_value_set_by_index(em_value_t a, em_value_t i, em_value_t b, em_pos_t *pos) {
+
+	if (ops[a.type].set_by_index) return ops[a.type].set_by_index(a, i, b, pos);
+
+	INVALID_OPERATION_RETURN(EM_RESULT_FAILURE);
 }
 
 /* log value */

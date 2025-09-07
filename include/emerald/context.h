@@ -13,6 +13,7 @@
 
 /* context */
 #define EM_CONTEXT_MAX_DIRS 32
+#define EM_CONTEXT_MAX_SCOPE 128
 
 typedef struct em_recfile {
 	struct em_recfile *next; /* next entry */
@@ -25,6 +26,8 @@ typedef struct em_context {
 	em_parser_t parser; /* local parser */
 	const char *dirstack[EM_CONTEXT_MAX_DIRS]; /* directory stack */
 	size_t ndirstack; /* number of directories in stack */
+	em_value_t scopestack[EM_CONTEXT_MAX_SCOPE]; /* scope stack */
+	size_t nscopestack; /* number of scopes in stack */
 	em_recfile_t *rec_first; /* first run file */
 	em_recfile_t *rec_last; /* last run file */
 } em_context_t;
@@ -38,6 +41,10 @@ EM_API em_value_t em_context_run_text(em_context_t *context, const char *path, c
 EM_API const char *em_context_pushdir(em_context_t *context, const char *path); /* push directory to stack */
 EM_API const char *em_context_resolve(em_context_t *context, const char *path); /* resolve file path */
 EM_API const char *em_context_popdir(em_context_t *context); /* pop directory from stack */
+EM_API em_result_t em_context_push_scope(em_context_t *context); /* push scope to stack */
+EM_API void em_context_pop_scope(em_context_t *context); /* pop scope from stack */
+EM_API void em_context_set_value(em_context_t *context, em_hash_t key, em_value_t value); /* set value in current scope */
+EM_API em_value_t em_context_get_value(em_context_t *context, em_hash_t key); /* get value from current scope */
 EM_API em_value_t em_context_run_file(em_context_t *context, em_pos_t *pos, const char *path); /* run code from file */
 
 EM_API em_value_t em_context_visit(em_context_t *context, em_node_t *node); /* visit node */
@@ -45,8 +52,11 @@ EM_API em_value_t em_context_visit_block(em_context_t *context, em_node_t *node)
 EM_API em_value_t em_context_visit_int(em_context_t *context, em_node_t *node); /* visit integer */
 EM_API em_value_t em_context_visit_float(em_context_t *context, em_node_t *node); /* visit float */
 EM_API em_value_t em_context_visit_string(em_context_t *context, em_node_t *node); /* visit string */
+EM_API em_value_t em_context_visit_identifier(em_context_t *context, em_node_t *node); /* visit identifier */
+EM_API em_value_t em_context_visit_access(em_context_t *context, em_node_t *node); /* visit member access */
 EM_API em_value_t em_context_visit_unary_operation(em_context_t *context, em_node_t *node); /* visit unary operation */
 EM_API em_value_t em_context_visit_binary_operation(em_context_t *context, em_node_t *node); /* visit binary operation */
+EM_API em_value_t em_context_visit_let(em_context_t *context, em_node_t *node); /* visit let statement */
 
 EM_API void em_context_destroy(em_context_t *context); /* destroy context */
 EM_API void em_context_free(em_context_t *context); /* free context */
