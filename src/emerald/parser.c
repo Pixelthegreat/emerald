@@ -333,13 +333,17 @@ EM_API em_node_t *em_parser_factor(em_parser_t *parser) {
 	/* unary operation */
 	em_token_pair_t pairs[] = {
 		{EM_TOKEN_TYPE_PLUS, NULL}, {EM_TOKEN_TYPE_MINUS, NULL},
-		{EM_TOKEN_TYPE_BITWISE_NOT, NULL},
+		{EM_TOKEN_TYPE_BITWISE_NOT, NULL}, {EM_TOKEN_TYPE_KEYWORD, "not"},
 	};
 	if (is_token_in(token, pairs, EM_TOKEN_PAIR_COUNT(pairs))) {
 
 		em_parser_advance(parser);
 
-		em_node_t *factor = em_parser_factor(parser);
+		em_node_t *factor;
+		if (token->type == EM_TOKEN_TYPE_KEYWORD)
+			factor = em_parser_comp_expr(parser);
+		else factor = em_parser_factor(parser);
+
 		if (!factor) return NULL;
 
 		em_node_t *node = em_node_new(EM_NODE_TYPE_UNARY_OPERATION, &token->pos);

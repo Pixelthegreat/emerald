@@ -9,6 +9,7 @@
 #include <emerald/core.h>
 #include <emerald/lexer.h>
 #include <emerald/parser.h>
+#include <emerald/value.h>
 
 /* context */
 #define EM_CONTEXT_MAX_DIRS 32
@@ -31,14 +32,23 @@ typedef struct em_context {
 #define EM_CONTEXT_INIT ((em_context_t){EM_FALSE})
 
 /* functions */
-extern em_context_t *em_context_new(void); /* create context */
-extern em_result_t em_context_init(em_context_t *context); /* initialize context */
-extern em_result_t em_context_run_text(em_context_t *context, const char *path, const char *text, em_ssize_t len); /* run code */
-extern const char *em_context_pushdir(em_context_t *context, const char *path); /* push directory to stack */
-extern const char *em_context_resolve(em_context_t *context, const char *path); /* resolve file path */
-extern const char *em_context_popdir(em_context_t *context); /* pop directory from stack */
-extern em_result_t em_context_run_file(em_context_t *context, em_pos_t *pos, const char *path); /* run code from file */
-extern void em_context_destroy(em_context_t *context); /* destroy context */
-extern void em_context_free(em_context_t *context); /* free context */
+EM_API em_context_t *em_context_new(void); /* create context */
+EM_API em_result_t em_context_init(em_context_t *context); /* initialize context */
+EM_API em_value_t em_context_run_text(em_context_t *context, const char *path, const char *text, em_ssize_t len); /* run code */
+EM_API const char *em_context_pushdir(em_context_t *context, const char *path); /* push directory to stack */
+EM_API const char *em_context_resolve(em_context_t *context, const char *path); /* resolve file path */
+EM_API const char *em_context_popdir(em_context_t *context); /* pop directory from stack */
+EM_API em_value_t em_context_run_file(em_context_t *context, em_pos_t *pos, const char *path); /* run code from file */
+
+EM_API em_value_t em_context_visit(em_context_t *context, em_node_t *node); /* visit node */
+EM_API em_value_t em_context_visit_block(em_context_t *context, em_node_t *node); /* visit block */
+EM_API em_value_t em_context_visit_int(em_context_t *context, em_node_t *node); /* visit integer */
+EM_API em_value_t em_context_visit_float(em_context_t *context, em_node_t *node); /* visit float */
+EM_API em_value_t em_context_visit_string(em_context_t *context, em_node_t *node); /* visit string */
+EM_API em_value_t em_context_visit_unary_operation(em_context_t *context, em_node_t *node); /* visit unary operation */
+EM_API em_value_t em_context_visit_binary_operation(em_context_t *context, em_node_t *node); /* visit binary operation */
+
+EM_API void em_context_destroy(em_context_t *context); /* destroy context */
+EM_API void em_context_free(em_context_t *context); /* free context */
 
 #endif /* EMERALD_CONTEXT_H */

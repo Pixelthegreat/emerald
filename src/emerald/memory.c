@@ -87,7 +87,7 @@ static void *track_alloc(size_t size, const char *file, em_ssize_t line) {
 	if (list->last) list->last->next = blk;
 	list->last = blk;
 
-	return (void *)(blk + 1);
+	return (void *)blk + sizeof(struct mblk);
 }
 
 /* track reallocation; necessary to readjust the allocation list */
@@ -95,7 +95,7 @@ static void *track_realloc(void *p, size_t size) {
 
 	if (!p) return NULL;
 
-	struct mblk *blk = (struct mblk *)p - 1;
+	struct mblk *blk = (struct mblk *)(p - sizeof(struct mblk));
 	struct mblk *oblk = blk;
 
 	blk = realloc(blk, sizeof(struct mblk) + size);
@@ -109,7 +109,7 @@ static void *track_realloc(void *p, size_t size) {
 	if (blk->list->first == oblk) blk->list->first = blk;
 	if (blk->list->last == oblk) blk->list->last = blk;
 
-	return (void *)(blk + 1);
+	return (void *)p + sizeof(struct mblk);
 }
 
 /* track free */
@@ -117,7 +117,7 @@ static void track_free(void *p) {
 
 	if (!p) return;
 
-	struct mblk *blk = (struct mblk *)p - 1;
+	struct mblk *blk = (struct mblk *)(p - sizeof(struct mblk));
 
 	if (blk->prev) blk->prev->next = blk->next;
 	if (blk->next) blk->next->prev = blk->prev;

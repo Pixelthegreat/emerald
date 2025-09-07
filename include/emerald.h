@@ -17,10 +17,13 @@
 #include <emerald/log.h>
 #include <emerald/refobj.h>
 #include <emerald/main.h>
-#include <emerald/context.h>
 #include <emerald/token.h>
 #include <emerald/lexer.h>
 #include <emerald/node.h>
 #include <emerald/parser.h>
+#include <emerald/value.h>
+#include <emerald/object.h>
+#include <emerald/context.h>
+#include <emerald/string.h>
 
 #endif /* EMERALD_H */

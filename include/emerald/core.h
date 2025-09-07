@@ -56,6 +56,12 @@ typedef uint32_t em_hash_t;
 typedef long em_inttype_t;
 #define EM_INTTYPE_MAX LONG_MAX
 
+#define EM_INTTYPE_FORMAT "%ld"
+
+typedef double em_floattype_t;
+
+#define EM_FLOATTYPE_FORMAT "%lf"
+
 /* an absurd concept: uint24_t */
 typedef struct em_uint24 {
 	uint8_t a, b, c;

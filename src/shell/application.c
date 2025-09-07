@@ -20,9 +20,11 @@ static em_wchar_t wpathbuf[PATHBUFSZ];
 /* arguments */
 enum {
 	OPT_HELP = 0,
+	OPT_NO_EXIT_FREE,
 	OPT_COUNT,
 
 	OPT_HELP_BIT = 0x1,
+	OPT_NO_EXIT_FREE_BIT = 0x100,
 };
 static int opt_flags = 0;
 static const char *arg_filename = NULL;
@@ -40,6 +42,10 @@ static em_result_t parse_args(int argc, const char **argv) {
 			/* print help */
 			if (!strcmp(arg, "-h") || !strcmp(arg, "--help"))
 				opt_flags |= OPT_HELP_BIT;
+
+			/* don't free objects after program execution */
+			else if (!strcmp(arg, "--no-exit-free"))
+				opt_flags |= OPT_NO_EXIT_FREE_BIT;
 
 			/* unrecognized */
 			else {
@@ -64,9 +70,11 @@ static em_result_t parse_args(int argc, const char **argv) {
 static void print_help(const char *progname) {
 
 	printf("Usage: %s [filename] [options]\n\nOptions:\n"
-	       "    -h|--help  Display this help message\n"
+	       "    -h|--help       Display this help message\n"
+	       "\nDebug/development options:\n"
+	       "    --no-exit-free  Don't auto free objects at the end of program execution\n"
 	       "\nArguments:\n"
-	       "    filename   The name of the file to run\n",
+	       "    filename        The name of the file to run\n",
 	       progname);
 }
 
@@ -86,21 +94,17 @@ static void repl(void) {
 			shbuf[--len] = 0;
 
 		/* run line */
-		(void)em_context_run_text(&context, "<stdin>", shbuf, len);
+		em_value_t res = em_context_run_text(&context, "<stdin>", shbuf, len);
 		if (em_log_catch(NULL)) em_log_flush();
+
+		if (EM_VALUE_OK(res)) em_value_log(res);
+		em_value_delete(res);
 	}
 }
 
 /* run application */
 EM_API em_result_t shell_application_run(int argc, const char **argv) {
 
-	if (em_init() != EM_RESULT_SUCCESS)
-		return EM_RESULT_FAILURE;
-
-	if (em_context_init(&context) != EM_RESULT_SUCCESS)
-		return EM_RESULT_FAILURE;
-
-	/* parse arguments */
 	if (parse_args(argc, argv) != EM_RESULT_SUCCESS)
 		return EM_RESULT_FAILURE;
 
@@ -110,10 +114,24 @@ EM_API em_result_t shell_application_run(int argc, const char **argv) {
 		return EM_RESULT_SUCCESS;
 	}
 
+	/* initialize emerald */
+	em_init_flag_t init_flags = 0;
+	if (opt_flags & OPT_NO_EXIT_FREE_BIT)
+		init_flags |= EM_INIT_FLAG_NO_EXIT_FREE;
+
+	if (em_init(init_flags) != EM_RESULT_SUCCESS)
+		return EM_RESULT_FAILURE;
+
+	if (em_context_init(&context) != EM_RESULT_SUCCESS)
+		return EM_RESULT_FAILURE;
+
 	/* interpret file or stdin */
 	if (!arg_filename) repl();
-	else if (em_context_run_file(&context, NULL, arg_filename) != EM_RESULT_SUCCESS) {
+	else {
+		em_value_t res = em_context_run_file(&context, NULL, arg_filename);
 		if (em_log_catch(NULL)) em_log_flush();
+
+		if (EM_VALUE_OK(res)) em_value_log(res);
 	}
 
 	return EM_RESULT_SUCCESS;

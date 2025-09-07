@@ -12,13 +12,20 @@
 
 em_reflist_t em_reflist_token = EM_REFLIST_INIT;
 em_reflist_t em_reflist_node = EM_REFLIST_INIT;
+em_reflist_t em_reflist_object = EM_REFLIST_INIT;
+
+static em_init_flag_t init_flags;
 
 /* initialize emerald */
-EM_API em_result_t em_init(void) {
+EM_API em_result_t em_init(em_init_flag_t flags) {
+
+	init_flags = flags;
 
 	if (em_reflist_init(&em_reflist_token) != EM_RESULT_SUCCESS)
 		return EM_RESULT_FAILURE;
 	if (em_reflist_init(&em_reflist_node) != EM_RESULT_SUCCESS)
+		return EM_RESULT_FAILURE;
+	if (em_reflist_init(&em_reflist_object) != EM_RESULT_SUCCESS)
 		return EM_RESULT_FAILURE;
 	return EM_RESULT_SUCCESS;
 }
@@ -26,6 +33,7 @@ EM_API em_result_t em_init(void) {
 /* quit emerald */
 EM_API void em_quit(void) {
 
+	if (!(init_flags & EM_INIT_FLAG_NO_EXIT_FREE)) em_reflist_destroy(&em_reflist_object);
 	em_reflist_destroy(&em_reflist_node);
 	em_reflist_destroy(&em_reflist_token);
 	em_print_allocs();

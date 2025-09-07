@@ -11,7 +11,18 @@
 #include <emerald/memory.h>
 #include <emerald/wchar.h>
 #include <emerald/path.h>
+#include <emerald/string.h>
 #include <emerald/context.h>
+
+/* visitors */
+static em_value_t (*visitors[EM_NODE_TYPE_COUNT])(em_context_t *, em_node_t *) = {
+	[EM_NODE_TYPE_BLOCK] = em_context_visit_block,
+	[EM_NODE_TYPE_INT] = em_context_visit_int,
+	[EM_NODE_TYPE_FLOAT] = em_context_visit_float,
+	[EM_NODE_TYPE_STRING] = em_context_visit_string,
+	[EM_NODE_TYPE_UNARY_OPERATION] = em_context_visit_unary_operation,
+	[EM_NODE_TYPE_BINARY_OPERATION] = em_context_visit_binary_operation,
+};
 
 /* NOTE: Always leave pathbuf1 for reuse, even if used previously */
 #define PATHBUFSZ 4096
@@ -66,23 +77,23 @@ EM_API em_result_t em_context_init(em_context_t *context) {
 }
 
 /* run code */
-EM_API em_result_t em_context_run_text(em_context_t *context, const char *path, const char *text, em_ssize_t len) {
+EM_API em_value_t em_context_run_text(em_context_t *context, const char *path, const char *text, em_ssize_t len) {
 
-	if (!context || !context->init) return EM_RESULT_FAILURE;
+	if (!context || !context->init) return EM_VALUE_FAIL;
 
 	em_lexer_reset(&context->lexer, path, text, len);
 	if (em_lexer_make_tokens(&context->lexer) != EM_RESULT_SUCCESS)
-		return EM_RESULT_FAILURE;
+		return EM_VALUE_FAIL;
 
 	em_parser_reset(&context->parser, context->lexer.first);
 	if (em_parser_parse(&context->parser) != EM_RESULT_SUCCESS)
-		return EM_RESULT_FAILURE;
+		return EM_VALUE_FAIL;
 
-	em_node_print(context->parser.node);
+	return em_context_visit(context, context->parser.node);
 }
 
 /* push directory to stack */
-extern const char *em_context_pushdir(em_context_t *context, const char *path) {
+EM_API const char *em_context_pushdir(em_context_t *context, const char *path) {
 
 	if (!context || !context->init) return NULL;
 
@@ -98,7 +109,7 @@ extern const char *em_context_pushdir(em_context_t *context, const char *path) {
 }
 
 /* resolve file path */
-extern const char *em_context_resolve(em_context_t *context, const char *path) {
+EM_API const char *em_context_resolve(em_context_t *context, const char *path) {
 
 	if (!context || !context->init) return NULL;
 
@@ -119,7 +130,7 @@ extern const char *em_context_resolve(em_context_t *context, const char *path) {
 }
 
 /* pop directory from stack */
-extern const char *em_context_popdir(em_context_t *context) {
+EM_API const char *em_context_popdir(em_context_t *context) {
 
 	if (!context || !context->init) return NULL;
 
@@ -134,29 +145,29 @@ extern const char *em_context_popdir(em_context_t *context) {
 }
 
 /* run code from file */
-extern em_result_t em_context_run_file(em_context_t *context, em_pos_t *pos, const char *path) {
+EM_API em_value_t em_context_run_file(em_context_t *context, em_pos_t *pos, const char *path) {
 
-	if (!context || !context->init) return EM_RESULT_FAILURE;
+	if (!context || !context->init) return EM_VALUE_FAIL;
 
 	/* get file path */
 	const char *rpath = em_context_resolve(context, path);
 	if (!rpath) {
 
-		em_log_raise("IOError", pos, "No such file or directory: '%s'", path);
-		return EM_RESULT_FAILURE;
+		em_log_runtime_error(pos, "No such file or directory: '%s'", path);
+		return EM_VALUE_FAIL;
 	}
 
 	/* check if file has already been run */
 	em_recfile_t *recfile = context->rec_first;
 	while (recfile) {
 		if (!strcmp(recfile->rpath, rpath))
-			return EM_RESULT_SUCCESS;
+			return EM_VALUE_INT(0);
 		recfile = recfile->next;
 	}
 
 	/* add directory to directory stack */
 	if (em_path_dirname(pathbuf1, PATHBUFSZ, rpath) != EM_RESULT_SUCCESS)
-		return EM_RESULT_FAILURE;
+		return EM_VALUE_FAIL;
 
 	char *buf = NULL;
 	if (pathbuf1[0]) {
@@ -169,7 +180,7 @@ extern em_result_t em_context_run_file(em_context_t *context, em_pos_t *pos, con
 		if (!em_context_pushdir(context, buf)) {
 
 			em_free(buf);
-			return EM_RESULT_FAILURE;
+			return EM_VALUE_FAIL;
 		}
 	}
 
@@ -177,8 +188,8 @@ extern em_result_t em_context_run_file(em_context_t *context, em_pos_t *pos, con
 	FILE *fp = fopen(rpath, "rb");
 	if (!fp) {
 
-		em_log_raise("IOError", pos, "%s: '%s'", strerror(errno), path);
-		return EM_RESULT_FAILURE;
+		em_log_runtime_error(pos, "%s: '%s'", strerror(errno), path);
+		return EM_VALUE_FAIL;
 	}
 
 	fseek(fp, 0, SEEK_END);
@@ -198,7 +209,7 @@ extern em_result_t em_context_run_file(em_context_t *context, em_pos_t *pos, con
 	recfile->next = NULL;
 
 	/* run code */
-	em_result_t res = em_context_run_text(context, recfile->rpath, fbuf, (em_ssize_t)len);
+	em_value_t res = em_context_run_text(context, recfile->rpath, fbuf, (em_ssize_t)len);
 
 	/* clean up */
 	em_free(fbuf);
@@ -209,7 +220,7 @@ extern em_result_t em_context_run_file(em_context_t *context, em_pos_t *pos, con
 	}
 
 	/* add file to run list */
-	if (res == EM_RESULT_SUCCESS) {
+	if (EM_VALUE_OK(res)) {
 
 		if (!context->rec_first) context->rec_first = recfile;
 		if (context->rec_last) context->rec_last->next = recfile;
@@ -218,6 +229,149 @@ extern em_result_t em_context_run_file(em_context_t *context, em_pos_t *pos, con
 	else em_free(recfile);
 	
 	return res;
+}
+
+/* visit node */
+EM_API em_value_t em_context_visit(em_context_t *context, em_node_t *node) {
+
+	if (!visitors[node->type]) {
+
+		em_log_runtime_error(&node->pos, "Unsupported node ('%s')", em_get_node_type_name(node->type));
+		return EM_VALUE_FAIL;
+	}
+	return visitors[node->type](context, node);
+}
+
+/* visit block */
+EM_API em_value_t em_context_visit_block(em_context_t *context, em_node_t *node) {
+
+	em_node_t *cur = node->first;
+	em_value_t value = EM_VALUE_INT(0);
+	while (cur) {
+
+		value = em_context_visit(context, cur);
+		if (!EM_VALUE_OK(value)) return EM_VALUE_FAIL;
+
+		cur = cur->next;
+		if (cur) em_value_delete(value);
+	}
+	return value;
+}
+
+/* visit integer */
+EM_API em_value_t em_context_visit_int(em_context_t *context, em_node_t *node) {
+
+	em_token_t *token = em_node_get_token(node, 0);
+
+	em_inttype_t value;
+	sscanf(token->value, EM_INTTYPE_FORMAT, &value);
+
+	return EM_VALUE_INT(value);
+}
+
+/* visit float */
+EM_API em_value_t em_context_visit_float(em_context_t *context, em_node_t *node) {
+
+	em_token_t *token = em_node_get_token(node, 0);
+
+	em_floattype_t value;
+	sscanf(token->value, EM_FLOATTYPE_FORMAT, &value);
+
+	return EM_VALUE_FLOAT(value);
+}
+
+/* visit string */
+EM_API em_value_t em_context_visit_string(em_context_t *context, em_node_t *node) {
+
+	em_token_t *token = em_node_get_token(node, 0);
+	return em_string_new_from_utf8(token->value, strlen(token->value));
+}
+
+/* visit unary operation */
+EM_API em_value_t em_context_visit_unary_operation(em_context_t *context, em_node_t *node) {
+
+	em_token_t *token = em_node_get_token(node, 0);
+	em_node_t *right_node = node->first;
+
+	em_value_t right = em_context_visit(context, right_node);
+	if (!EM_VALUE_OK(right)) return EM_VALUE_FAIL;
+
+	/* operation */
+	em_value_t result;
+
+	if (!strcmp(token->value, "+"))
+		result = right;
+	else if (!strcmp(token->value, "-"))
+		result = em_value_multiply(right, EM_VALUE_INT(-1), &node->pos);
+	else if (!strcmp(token->value, "not"))
+		result = EM_VALUE_INT_INV(em_value_is_true(right, &node->pos));
+	else {
+		em_log_runtime_error(&node->pos, "Unsupported operation ('%s')", token->value);
+		result = EM_VALUE_FAIL;
+	}
+
+	em_value_delete(right);
+	return result;
+}
+
+/* visit binary operation */
+EM_API em_value_t em_context_visit_binary_operation(em_context_t *context, em_node_t *node) {
+
+	em_node_t *left_node = node->first;
+	em_token_t *token = em_node_get_token(node, 0);
+	em_node_t *right_node = left_node->next;
+
+	em_value_t left = em_context_visit(context, left_node);
+	if (!EM_VALUE_OK(left)) return EM_VALUE_FAIL;
+
+	em_value_t right = em_context_visit(context, right_node);
+	if (!EM_VALUE_OK(right)) {
+
+		em_value_delete(left);
+		return EM_VALUE_FAIL;
+	}
+
+	/* operation */
+	em_value_t result;
+
+	if (!strcmp(token->value, "+"))
+		result = em_value_add(left, right, &node->pos);
+	else if (!strcmp(token->value, "-"))
+		result = em_value_subtract(left, right, &node->pos);
+	else if (!strcmp(token->value, "*"))
+		result = em_value_multiply(left, right, &node->pos);
+	else if (!strcmp(token->value, "/"))
+		result = em_value_divide(left, right, &node->pos);
+	else if (!strcmp(token->value, "|"))
+		result = em_value_or(left, right, &node->pos);
+	else if (!strcmp(token->value, "&"))
+		result = em_value_and(left, right, &node->pos);
+	else if (!strcmp(token->value, "<<"))
+		result = em_value_shift_left(left, right, &node->pos);
+	else if (!strcmp(token->value, ">>"))
+		result = em_value_shift_right(left, right, &node->pos);
+	else if (!strcmp(token->value, "=="))
+		result = em_value_compare_equal(left, right, &node->pos);
+	else if (!strcmp(token->value, "<"))
+		result = em_value_compare_less_than(left, right, &node->pos);
+	else if (!strcmp(token->value, "<="))
+		result = EM_VALUE_INT_INV(em_value_compare_greater_than(left, right, &node->pos));
+	else if (!strcmp(token->value, ">"))
+		result = em_value_compare_greater_than(left, right, &node->pos);
+	else if (!strcmp(token->value, ">="))
+		result = EM_VALUE_INT_INV(em_value_compare_less_than(left, right, &node->pos));
+	else if (!strcmp(token->value, "or"))
+		result = em_value_compare_or(left, right, &node->pos);
+	else if (!strcmp(token->value, "and"))
+		result = em_value_compare_and(left, right, &node->pos);
+	else {
+		em_log_runtime_error(&node->pos, "Unsupported operation ('%s')", token->value);
+		result = EM_VALUE_FAIL;
+	}
+
+	em_value_delete(left);
+	em_value_delete(right);
+	return result;
 }
 
 /* destroy context */

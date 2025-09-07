@@ -13,7 +13,7 @@
  *   - Paths that start with one or more of the
  *     delimeter are relative to the root directory
  *   - Paths that end with one or more of the delimeter
- *     are interpreted as if said character was not
+ *     are interpreted as if said characters were not
  *     present
  *   - Paths can have multibyte characters, so long as
  *     they are encoded with UTF-8

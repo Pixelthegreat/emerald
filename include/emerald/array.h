@@ -37,6 +37,8 @@ typedef union em_generic {
 	const void  *t_cvoidp;
 	char        *t_charp;
 	const char  *t_ccharp;
+	float        t_float;
+	double       t_double;
 
 	/* emerald types */
 	em_bool_t    te_bool;
@@ -45,6 +47,7 @@ typedef union em_generic {
 	em_inttype_t te_inttype;
 	em_uint24_t  te_uint24;
 	em_wchar_t   te_wchar;
+	em_floattype_t te_floattype;
 } em_generic_t;
 
 typedef struct em_generic_result {

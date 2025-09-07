@@ -8,8 +8,13 @@
 
 #include <emerald/core.h>
 
+/* initialize flags */
+typedef enum em_init_flag {
+	EM_INIT_FLAG_NO_EXIT_FREE = 0x1,
+} em_init_flag_t;
+
 /* functions */
-EM_API em_result_t em_init(void); /* initialize emerald */
+EM_API em_result_t em_init(em_init_flag_t flags); /* initialize emerald */
 EM_API void em_quit(void); /* quit emerald */
 
 #endif /* EMERALD_MAIN_H */
