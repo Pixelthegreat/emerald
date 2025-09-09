@@ -12,7 +12,7 @@
 /* map entry */
 typedef struct em_map_entry {
 	em_hash_t key; /* hashed key */
-	em_value_t value; /* item value */
+	em_value_t value; /* entry value */
 	struct em_map_entry *previous; /* previous entry */
 	struct em_map_entry *next; /* next entry */
 } em_map_entry_t;

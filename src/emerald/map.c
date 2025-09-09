@@ -8,6 +8,7 @@
 #include <emerald/core.h>
 #include <emerald/log.h>
 #include <emerald/memory.h>
+#include <emerald/string.h>
 #include <emerald/map.h>
 
 /* object type */
@@ -15,12 +16,14 @@ static em_value_t get_by_hash(em_value_t v, em_hash_t hash, em_pos_t *pos);
 static em_value_t get_by_index(em_value_t v, em_value_t i, em_pos_t *pos);
 static em_result_t set_by_hash(em_value_t a, em_hash_t hash, em_value_t b, em_pos_t *pos);
 static em_result_t set_by_index(em_value_t a, em_value_t i, em_value_t b, em_pos_t *pos);
+static em_value_t to_string(em_value_t v, em_pos_t *pos);
 
 em_object_type_t type = {
 	.get_by_hash = get_by_hash,
 	.get_by_index = get_by_index,
 	.set_by_hash = set_by_hash,
 	.set_by_index = set_by_index,
+	.to_string = to_string,
 };
 
 /* get value by key hash */
@@ -51,6 +54,12 @@ static em_result_t set_by_index(em_value_t a, em_value_t i, em_value_t b, em_pos
 	return EM_RESULT_SUCCESS;
 }
 
+/* get string representation of map */
+static em_value_t to_string(em_value_t v, em_pos_t *pos) {
+
+	return em_string_new_from_utf8("{...}", 5);
+}
+
 /* free map */
 static void map_free(void *p) {
 
@@ -59,8 +68,12 @@ static void map_free(void *p) {
 	em_map_entry_t *entry = map->first;
 	while (entry) {
 
+		em_map_entry_t *next = entry->next;
+
+		em_value_decref(entry->value);
 		em_free(entry);
-		entry = entry->next;
+
+		entry = next;
 	}
 }
 

@@ -5,6 +5,7 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <emerald/core.h>
 #include <emerald/wchar.h>
 #include <emerald/object.h>
@@ -31,6 +32,7 @@ static em_value_t compare_equal_int(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t compare_less_than_int(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t compare_greater_than_int(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_hash_t hash_int(em_value_t v, em_pos_t *pos);
+static em_value_t to_string_int(em_value_t v, em_pos_t *pos);
 
 static em_value_t is_true_float(em_value_t v, em_pos_t *pos);
 static em_value_t add_float(em_value_t a, em_value_t b, em_pos_t *pos);
@@ -41,6 +43,7 @@ static em_value_t compare_equal_float(em_value_t a, em_value_t b, em_pos_t *pos)
 static em_value_t compare_less_than_float(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t compare_greater_than_float(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_hash_t hash_float(em_value_t v, em_pos_t *pos);
+static em_value_t to_string_float(em_value_t v, em_pos_t *pos);
 
 struct {
 	em_value_t (*is_true)(em_value_t, em_pos_t *);
@@ -60,6 +63,7 @@ struct {
 	em_value_t (*get_by_index)(em_value_t, em_value_t, em_pos_t *);
 	em_result_t (*set_by_hash)(em_value_t, em_hash_t, em_value_t, em_pos_t *);
 	em_result_t (*set_by_index)(em_value_t, em_value_t, em_value_t, em_pos_t *);
+	em_value_t (*to_string)(em_value_t, em_pos_t *);
 
 } ops[EM_VALUE_TYPE_COUNT] = {
 	[EM_VALUE_TYPE_INT] = {
@@ -76,6 +80,7 @@ struct {
 		.compare_less_than = compare_less_than_int,
 		.compare_greater_than = compare_greater_than_int,
 		.hash = hash_int,
+		.to_string = to_string_int,
 	},
 	[EM_VALUE_TYPE_FLOAT] = {
 		.is_true = is_true_float,
@@ -87,6 +92,7 @@ struct {
 		.compare_less_than = compare_less_than_float,
 		.compare_greater_than = compare_greater_than_float,
 		.hash = hash_float,
+		.to_string = to_string_float,
 	},
 	[EM_VALUE_TYPE_OBJECT] = {
 		.is_true = em_object_is_true,
@@ -106,6 +112,7 @@ struct {
 		.get_by_index = em_object_get_by_index,
 		.set_by_hash = em_object_set_by_hash,
 		.set_by_index = em_object_set_by_index,
+		.to_string = em_object_to_string,
 	},
 };
 
@@ -244,6 +251,15 @@ static em_hash_t hash_int(em_value_t v, em_pos_t *pos) {
 	return (em_hash_t)v.value.te_inttype;
 }
 
+/* get string representation of int */
+static em_value_t to_string_int(em_value_t v, em_pos_t *pos) {
+
+	char buf[64];
+	snprintf(buf, 64, EM_INTTYPE_FORMAT, v.value.te_inttype);
+
+	return em_string_new_from_utf8(buf, strlen(buf));
+}
+
 /* is float true */
 static em_value_t is_true_float(em_value_t v, em_pos_t *pos) {
 
@@ -347,10 +363,17 @@ static em_hash_t hash_float(em_value_t v, em_pos_t *pos) {
 	return *(em_hash_t *)&v.value.te_floattype;
 }
 
+/* get string representation of float */
+static em_value_t to_string_float(em_value_t v, em_pos_t *pos) {
+
+	char buf[64];
+	snprintf(buf, 64, EM_FLOATTYPE_FORMAT, v.value.te_floattype);
+
+	return em_string_new_from_utf8(buf, strlen(buf));
+}
+
 /* increase reference count */
 EM_API void em_value_incref(em_value_t v) {
-
-	if (!EM_VALUE_OK(v)) return;
 
 	if (v.type == EM_VALUE_TYPE_OBJECT)
 		EM_OBJECT_INCREF(v.value.t_voidp);
@@ -358,8 +381,6 @@ EM_API void em_value_incref(em_value_t v) {
 
 /* decrease reference count */
 EM_API void em_value_decref(em_value_t v) {
-
-	if (!EM_VALUE_OK(v)) return;
 
 	if (v.type == EM_VALUE_TYPE_OBJECT)
 		EM_OBJECT_DECREF(v.value.t_voidp);
@@ -515,28 +536,23 @@ EM_API em_result_t em_value_set_by_index(em_value_t a, em_value_t i, em_value_t 
 	INVALID_OPERATION_RETURN(EM_RESULT_FAILURE);
 }
 
+/* get string representation of value */
+EM_API em_value_t em_value_to_string(em_value_t v, em_pos_t *pos) {
+
+	if (ops[v.type].to_string) return ops[v.type].to_string(v, pos);
+
+	return em_string_new_from_utf8("(None)", 6);
+}
+
 /* log value */
 EM_API void em_value_log(em_value_t v) {
 
-	switch (v.type) {
-		case EM_VALUE_TYPE_INT:
-			em_log_info(EM_INTTYPE_FORMAT, v.value.te_inttype);
-			break;
-		case EM_VALUE_TYPE_FLOAT:
-			em_log_info(EM_FLOATTYPE_FORMAT, v.value.te_floattype);
-			break;
-		case EM_VALUE_TYPE_OBJECT:
-			em_value_t string = em_object_to_string(v, NULL); /* TODO: Figure out what to do about NULL position */
+	em_value_t string = em_value_to_string(v, NULL); /* TODO: Figure out what to do about NULL position */
 
-			static char stringbuf[1024];
-			em_wchar_to_utf8(stringbuf, 1024, EM_STRING(EM_OBJECT_FROM_VALUE(string))->data);
-			em_log_info("%s", stringbuf);
+	static char stringbuf[1024];
+	em_wchar_to_utf8(stringbuf, 1024, EM_STRING(EM_OBJECT_FROM_VALUE(string))->data);
+	em_log_info("%s", stringbuf);
 
-			if (string.value.t_voidp != v.value.t_voidp)
-				em_value_delete(string);
-			break;
-		default:
-			em_log_info("(value of type %d)", v.type);
-			break;
-	}
+	if (string.value.t_voidp != v.value.t_voidp)
+		em_value_delete(string);
 }

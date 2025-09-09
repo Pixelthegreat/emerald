@@ -53,9 +53,11 @@ EM_API em_value_t em_context_visit_int(em_context_t *context, em_node_t *node); 
 EM_API em_value_t em_context_visit_float(em_context_t *context, em_node_t *node); /* visit float */
 EM_API em_value_t em_context_visit_string(em_context_t *context, em_node_t *node); /* visit string */
 EM_API em_value_t em_context_visit_identifier(em_context_t *context, em_node_t *node); /* visit identifier */
-EM_API em_value_t em_context_visit_access(em_context_t *context, em_node_t *node); /* visit member access */
+EM_API em_value_t em_context_visit_list(em_context_t *context, em_node_t *node); /* visit list */
+EM_API em_value_t em_context_visit_map(em_context_t *context, em_node_t *node); /* visit map */
 EM_API em_value_t em_context_visit_unary_operation(em_context_t *context, em_node_t *node); /* visit unary operation */
 EM_API em_value_t em_context_visit_binary_operation(em_context_t *context, em_node_t *node); /* visit binary operation */
+EM_API em_value_t em_context_visit_access(em_context_t *context, em_node_t *node); /* visit member access */
 EM_API em_value_t em_context_visit_let(em_context_t *context, em_node_t *node); /* visit let statement */
 
 EM_API void em_context_destroy(em_context_t *context); /* destroy context */

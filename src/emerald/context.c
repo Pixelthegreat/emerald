@@ -15,6 +15,7 @@
 #include <emerald/path.h>
 #include <emerald/string.h>
 #include <emerald/map.h>
+#include <emerald/list.h>
 #include <emerald/context.h>
 
 /* visitors */
@@ -24,9 +25,11 @@ static em_value_t (*visitors[EM_NODE_TYPE_COUNT])(em_context_t *, em_node_t *) =
 	[EM_NODE_TYPE_FLOAT] = em_context_visit_float,
 	[EM_NODE_TYPE_STRING] = em_context_visit_string,
 	[EM_NODE_TYPE_IDENTIFIER] = em_context_visit_identifier,
-	[EM_NODE_TYPE_ACCESS] = em_context_visit_access,
+	[EM_NODE_TYPE_LIST] = em_context_visit_list,
+	[EM_NODE_TYPE_MAP] = em_context_visit_map,
 	[EM_NODE_TYPE_UNARY_OPERATION] = em_context_visit_unary_operation,
 	[EM_NODE_TYPE_BINARY_OPERATION] = em_context_visit_binary_operation,
+	[EM_NODE_TYPE_ACCESS] = em_context_visit_access,
 	[EM_NODE_TYPE_LET] = em_context_visit_let,
 };
 
@@ -367,41 +370,67 @@ EM_API em_value_t em_context_visit_identifier(em_context_t *context, em_node_t *
 	return value;
 }
 
-/* visit member access */
-EM_API em_value_t em_context_visit_access(em_context_t *context, em_node_t *node) {
+/* visit list */
+EM_API em_value_t em_context_visit_list(em_context_t *context, em_node_t *node) {
 
-	em_node_t *container_node = node->first;
-	em_token_t *name_token = em_node_get_token(node, 0);
-	em_node_t *index_node = container_node->next;
+	size_t nchildren = 0;
 
-	em_value_t container = em_context_visit(context, container_node);
-	if (!EM_VALUE_OK(container)) return EM_VALUE_FAIL;
+	em_node_t *cur = node->first;
+	while (cur) {
 
-	em_value_t value = EM_VALUE_FAIL, index = EM_VALUE_FAIL;
-	if (index_node) {
+		nchildren++;
+		cur = cur->next;
+	}
+	cur = node->first;
 
-		index = em_context_visit(context, index_node);
-		if (!EM_VALUE_OK(index)) {
+	em_value_t list = em_list_new(nchildren);
+	while (cur) {
 
-			em_value_delete(container);
+		em_value_t value = em_context_visit(context, cur);
+		if (!EM_VALUE_OK(value)) {
+
+			em_value_delete(list);
 			return EM_VALUE_FAIL;
 		}
-		value = em_value_get_by_index(container, index, &node->pos);
-
-		if (!EM_VALUE_OK(value) && !em_log_catch(NULL))
-			em_log_runtime_error(&node->pos, "Invalid index");
+		em_list_append(list, value);
+		cur = cur->next;
 	}
-	else {
+	return list;
+}
 
-		em_hash_t hash = em_utf8_strhash(name_token->value);
-		value = em_value_get_by_hash(container, hash, &node->pos);
+/* visit map */
+EM_API em_value_t em_context_visit_map(em_context_t *context, em_node_t *node) {
 
-		if (!EM_VALUE_OK(value) && !em_log_catch(NULL))
-			em_log_runtime_error(&node->pos, "Attribute '%s' not defined", name_token->value);
+	em_node_t *cur = node->first;
+	em_value_t map = em_map_new();
+
+	while (cur) {
+
+		em_node_t *key_node = cur;
+		em_node_t *value_node = key_node->next;
+
+		em_value_t key = em_context_visit(context, key_node);
+		if (!EM_VALUE_OK(key)) {
+
+			em_value_delete(map);
+			return EM_VALUE_FAIL;
+		}
+		em_value_t value = em_context_visit(context, value_node);
+		if (!EM_VALUE_OK(value)) {
+
+			em_value_delete(key);
+			em_value_delete(map);
+			return EM_VALUE_FAIL;
+		}
+
+		/* set item */
+		em_hash_t hash = em_value_hash(key, &key_node->pos);
+		em_map_set(map, hash, value);
+
+		em_value_delete(key);
+		cur = value_node->next;
 	}
-
-	em_value_delete(index);
-	return value;
+	return map;
 }
 
 /* visit unary operation */
@@ -491,6 +520,43 @@ EM_API em_value_t em_context_visit_binary_operation(em_context_t *context, em_no
 	return result;
 }
 
+/* visit member access */
+EM_API em_value_t em_context_visit_access(em_context_t *context, em_node_t *node) {
+
+	em_node_t *container_node = node->first;
+	em_token_t *name_token = em_node_get_token(node, 0);
+	em_node_t *index_node = container_node->next;
+
+	em_value_t container = em_context_visit(context, container_node);
+	if (!EM_VALUE_OK(container)) return EM_VALUE_FAIL;
+
+	em_value_t value = EM_VALUE_FAIL, index = EM_VALUE_FAIL;
+	if (index_node) {
+
+		index = em_context_visit(context, index_node);
+		if (!EM_VALUE_OK(index)) {
+
+			em_value_delete(container);
+			return EM_VALUE_FAIL;
+		}
+		value = em_value_get_by_index(container, index, &node->pos);
+
+		if (!EM_VALUE_OK(value) && !em_log_catch(NULL))
+			em_log_runtime_error(&node->pos, "Invalid index");
+	}
+	else {
+
+		em_hash_t hash = em_utf8_strhash(name_token->value);
+		value = em_value_get_by_hash(container, hash, &node->pos);
+
+		if (!EM_VALUE_OK(value) && !em_log_catch(NULL))
+			em_log_runtime_error(&node->pos, "Attribute '%s' not defined", name_token->value);
+	}
+
+	em_value_delete(index);
+	return value;
+}
+
 /* visit let statement */
 EM_API em_value_t em_context_visit_let(em_context_t *context, em_node_t *node) {
 
@@ -549,6 +615,9 @@ EM_API em_value_t em_context_visit_let(em_context_t *context, em_node_t *node) {
 
 		if (em_value_set_by_index(container, index, value, &node->pos) != EM_RESULT_SUCCESS) {
 
+			if (!em_log_catch(NULL))
+				em_log_runtime_error(&node->pos, "Invalid index");
+
 			em_value_delete(index);
 			em_value_delete(value);
 			return EM_VALUE_FAIL;
@@ -558,6 +627,9 @@ EM_API em_value_t em_context_visit_let(em_context_t *context, em_node_t *node) {
 
 		em_hash_t hash = em_utf8_strhash(name_token->value);
 		if (em_value_set_by_hash(container, hash, value, &node->pos) != EM_RESULT_SUCCESS) {
+
+			if (!em_log_catch(NULL))
+				em_log_runtime_error(&node->pos, "Attribute '%s' not defined", name_token->value);
 
 			em_value_delete(index);
 			em_value_delete(value);

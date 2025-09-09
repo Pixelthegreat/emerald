@@ -26,5 +26,6 @@
 #include <emerald/context.h>
 #include <emerald/string.h>
 #include <emerald/map.h>
+#include <emerald/list.h>
 
 #endif /* EMERALD_H */

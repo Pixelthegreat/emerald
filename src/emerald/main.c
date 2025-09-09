@@ -33,8 +33,10 @@ EM_API em_result_t em_init(em_init_flag_t flags) {
 /* quit emerald */
 EM_API void em_quit(void) {
 
-	if (!(init_flags & EM_INIT_FLAG_NO_EXIT_FREE)) em_reflist_destroy(&em_reflist_object);
+	if (!(init_flags & EM_INIT_FLAG_NO_EXIT_FREE))
+		em_reflist_destroy(&em_reflist_object);
 	em_reflist_destroy(&em_reflist_node);
 	em_reflist_destroy(&em_reflist_token);
-	em_print_allocs();
+	if (!(init_flags & EM_INIT_FLAG_NO_PRINT_ALLOCS))
+		em_print_allocs();
 }

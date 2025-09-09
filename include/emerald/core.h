@@ -60,7 +60,7 @@ typedef long em_inttype_t;
 
 typedef double em_floattype_t;
 
-#define EM_FLOATTYPE_FORMAT "%lf"
+#define EM_FLOATTYPE_FORMAT "%lg"
 
 /* an absurd concept: uint24_t */
 typedef struct em_uint24 {

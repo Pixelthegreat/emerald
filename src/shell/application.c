@@ -20,11 +20,16 @@ static em_wchar_t wpathbuf[PATHBUFSZ];
 /* arguments */
 enum {
 	OPT_HELP = 0,
+
 	OPT_NO_EXIT_FREE,
+	OPT_NO_PRINT_ALLOCS,
+
 	OPT_COUNT,
 
 	OPT_HELP_BIT = 0x1,
-	OPT_NO_EXIT_FREE_BIT = 0x100,
+
+	OPT_NO_EXIT_FREE_BIT = 0x10000,
+	OPT_NO_PRINT_ALLOCS_BIT = 0x20000,
 };
 static int opt_flags = 0;
 static const char *arg_filename = NULL;
@@ -46,6 +51,10 @@ static em_result_t parse_args(int argc, const char **argv) {
 			/* don't free objects after program execution */
 			else if (!strcmp(arg, "--no-exit-free"))
 				opt_flags |= OPT_NO_EXIT_FREE_BIT;
+
+			/* don't print and handle unresolved allocations after program execution */
+			else if (!strcmp(arg, "--no-print-allocs"))
+				opt_flags |= OPT_NO_PRINT_ALLOCS_BIT;
 
 			/* unrecognized */
 			else {
@@ -71,8 +80,6 @@ static void print_help(const char *progname) {
 
 	printf("Usage: %s [filename] [options]\n\nOptions:\n"
 	       "    -h|--help       Display this help message\n"
-	       "\nDebug/development options:\n"
-	       "    --no-exit-free  Don't auto free objects at the end of program execution\n"
 	       "\nArguments:\n"
 	       "    filename        The name of the file to run\n",
 	       progname);
@@ -118,18 +125,14 @@ EM_API em_result_t shell_application_run(int argc, const char **argv) {
 	em_init_flag_t init_flags = 0;
 	if (opt_flags & OPT_NO_EXIT_FREE_BIT)
 		init_flags |= EM_INIT_FLAG_NO_EXIT_FREE;
+	if (opt_flags & OPT_NO_PRINT_ALLOCS_BIT)
+		init_flags |= EM_INIT_FLAG_NO_PRINT_ALLOCS;
 
 	if (em_init(init_flags) != EM_RESULT_SUCCESS)
 		return EM_RESULT_FAILURE;
 
 	if (em_context_init(&context) != EM_RESULT_SUCCESS)
 		return EM_RESULT_FAILURE;
-
-	em_value_t map = em_map_new();
-	em_map_set(map, em_utf8_strhash("a"), EM_VALUE_INT(10));
-	em_map_set(map, em_utf8_strhash("b"), EM_VALUE_INT(11));
-
-	em_context_set_value(&context, em_utf8_strhash("x"), map);
 
 	/* interpret file or stdin */
 	if (!arg_filename) repl();

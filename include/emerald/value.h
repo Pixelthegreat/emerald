@@ -61,6 +61,7 @@ EM_API em_value_t em_value_get_by_hash(em_value_t v, em_hash_t hash, em_pos_t *p
 EM_API em_value_t em_value_get_by_index(em_value_t v, em_value_t i, em_pos_t *pos); /* get value by index value */
 EM_API em_result_t em_value_set_by_hash(em_value_t a, em_hash_t hash, em_value_t b, em_pos_t *pos); /* set value by key hash */
 EM_API em_result_t em_value_set_by_index(em_value_t a, em_value_t i, em_value_t b, em_pos_t *pos); /* set value by index */
+EM_API em_value_t em_value_to_string(em_value_t v, em_pos_t *pos); /* get string representation of value */
 EM_API void em_value_log(em_value_t v); /* log value */
 
 #endif /* EMERALD_VALUE_H */
