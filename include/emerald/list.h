@@ -27,5 +27,6 @@ EM_API em_value_t em_list_new(size_t nbase); /* create list */
 EM_API void em_list_set(em_value_t object, em_ssize_t index, em_value_t value); /* set value in list */
 EM_API em_value_t em_list_get(em_value_t object, em_ssize_t index); /* get value from list */
 EM_API void em_list_append(em_value_t object, em_value_t value); /* add item to list */
+EM_API em_bool_t em_is_list(em_value_t v); /* determine if value is list */
 
 #endif /* EMERALD_LIST_H */

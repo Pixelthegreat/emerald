@@ -22,6 +22,7 @@ static const char *typenames[EM_TOKEN_TYPE_COUNT] = {
 	"MINUS",
 	"ASTERISK",
 	"SLASH",
+	"MODULO",
 	"OPEN_PAREN",
 	"CLOSE_PAREN",
 	"OPEN_BRACKET",

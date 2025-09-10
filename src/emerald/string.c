@@ -152,3 +152,10 @@ EM_API em_value_t em_string_new_from_wchar(const em_wchar_t *data, size_t length
 	string->hash = em_wchar_strhash(string->data);
 	return value;
 }
+
+/* determine if value is a string */
+EM_API em_bool_t em_is_string(em_value_t v) {
+
+	return v.type == EM_VALUE_TYPE_OBJECT &&
+	       EM_OBJECT_FROM_VALUE(v)->type == &type;
+}

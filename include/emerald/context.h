@@ -58,7 +58,14 @@ EM_API em_value_t em_context_visit_map(em_context_t *context, em_node_t *node); 
 EM_API em_value_t em_context_visit_unary_operation(em_context_t *context, em_node_t *node); /* visit unary operation */
 EM_API em_value_t em_context_visit_binary_operation(em_context_t *context, em_node_t *node); /* visit binary operation */
 EM_API em_value_t em_context_visit_access(em_context_t *context, em_node_t *node); /* visit member access */
+EM_API em_value_t em_context_visit_call(em_context_t *context, em_node_t *node); /* visit call */
 EM_API em_value_t em_context_visit_let(em_context_t *context, em_node_t *node); /* visit let statement */
+EM_API em_value_t em_context_visit_if(em_context_t *context, em_node_t *node); /* visit if statement */
+EM_API em_value_t em_context_visit_for(em_context_t *context, em_node_t *node); /* visit for statement */
+EM_API em_value_t em_context_visit_foreach(em_context_t *context, em_node_t *node); /* visit foreach statement */
+EM_API em_value_t em_context_visit_while(em_context_t *context, em_node_t *node); /* visit while statement */
+EM_API em_value_t em_context_visit_func(em_context_t *context, em_node_t *node); /* visit func statement */
+EM_API em_value_t em_context_visit_puts(em_context_t *context, em_node_t *node); /* visit puts statement */
 
 EM_API void em_context_destroy(em_context_t *context); /* destroy context */
 EM_API void em_context_free(em_context_t *context); /* free context */

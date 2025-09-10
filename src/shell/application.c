@@ -133,6 +133,8 @@ EM_API em_result_t shell_application_run(int argc, const char **argv) {
 
 	if (em_context_init(&context) != EM_RESULT_SUCCESS)
 		return EM_RESULT_FAILURE;
+	if (em_module_init_all(&context) != EM_RESULT_SUCCESS)
+		return EM_RESULT_FAILURE;
 
 	/* interpret file or stdin */
 	if (!arg_filename) repl();

@@ -135,3 +135,10 @@ EM_API em_value_t em_map_get(em_value_t object, em_hash_t key) {
 	}
 	return EM_VALUE_FAIL;
 }
+
+/* determine if value is map */
+EM_API em_bool_t em_is_map(em_value_t v) {
+
+	return v.type == EM_VALUE_TYPE_OBJECT &&
+	       EM_OBJECT_FROM_VALUE(v)->type == &type;
+}

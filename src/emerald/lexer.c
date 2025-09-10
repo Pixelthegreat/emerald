@@ -173,6 +173,14 @@ EM_API em_result_t em_lexer_make_tokens(em_lexer_t *lexer) {
 			em_pos_advance(&lexer->pos);
 		}
 
+		/* modulo */
+		else if (lexer->pos.cc == '%') {
+
+			if (!em_lexer_add_token(lexer, EM_TOKEN_TYPE_MODULO, &lexer->pos, "%"))
+				return EM_RESULT_FAILURE;
+			em_pos_advance(&lexer->pos);
+		}
+
 		/* open parenthesis */
 		else if (lexer->pos.cc == '(') {
 

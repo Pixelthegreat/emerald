@@ -195,6 +195,7 @@ EM_API em_node_t *em_parser_term(em_parser_t *parser) {
 	em_token_pair_t pairs[] = {
 		{EM_TOKEN_TYPE_ASTERISK, NULL}, {EM_TOKEN_TYPE_SLASH, NULL},
 		{EM_TOKEN_TYPE_BITWISE_RIGHT_SHIFT, NULL}, {EM_TOKEN_TYPE_BITWISE_LEFT_SHIFT, NULL},
+		{EM_TOKEN_TYPE_MODULO, NULL},
 	};
 	return em_parser_binop(parser, em_parser_call, pairs, EM_TOKEN_PAIR_COUNT(pairs));
 }
@@ -775,7 +776,7 @@ EM_API em_node_t *em_parser_factor(em_parser_t *parser) {
 
 			em_node_t *statement = em_parser_statement(parser);
 			if (!statement) { EM_NODE_DECREF(node); return NULL; }
-			em_node_add_child(node, statement);
+			em_node_add_child(block, statement);
 		}
 		if (!em_token_matches(parser->token, EM_TOKEN_TYPE_KEYWORD, "end")) {
 

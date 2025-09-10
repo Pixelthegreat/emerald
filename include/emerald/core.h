@@ -61,6 +61,7 @@ typedef long em_inttype_t;
 typedef double em_floattype_t;
 
 #define EM_FLOATTYPE_FORMAT "%lg"
+#define EM_FLOATTYPE_MOD fmod
 
 /* an absurd concept: uint24_t */
 typedef struct em_uint24 {
@@ -80,5 +81,7 @@ typedef em_uint24_t em_wchar_t; /* useful for wide but not completely wide chara
 #define EM_WC2INT EM_INT
 #define EM_WCEQ EM_U24EQ
 #define EM_WCZ EM_U24Z
+
+struct em_context;
 
 #endif /* EM_CORE_H */

@@ -14,12 +14,14 @@
 static em_value_t is_true(em_value_t v, em_pos_t *pos);
 static em_value_t get_by_index(em_value_t v, em_value_t i, em_pos_t *pos);
 static em_result_t set_by_index(em_value_t a, em_value_t i, em_value_t b, em_pos_t *pos);
+static em_value_t length_of(em_value_t v, em_pos_t *pos);
 static em_value_t to_string(em_value_t v, em_pos_t *pos);
 
 static em_object_type_t type = {
 	.is_true = is_true,
 	.get_by_index = get_by_index,
 	.set_by_index = set_by_index,
+	.length_of = length_of,
 	.to_string = to_string,
 };
 
@@ -52,6 +54,13 @@ static em_result_t set_by_index(em_value_t a, em_value_t i, em_value_t b, em_pos
 
 	em_list_set(a, (em_ssize_t)i.value.te_inttype, b);
 	return EM_RESULT_SUCCESS;
+}
+
+/* get length of list */
+static em_value_t length_of(em_value_t v, em_pos_t *pos) {
+
+	em_list_t *list = EM_LIST(EM_OBJECT_FROM_VALUE(v));
+	return EM_VALUE_INT((em_inttype_t)list->nitems);
 }
 
 /* get string representation */
@@ -148,4 +157,11 @@ EM_API void em_list_append(em_value_t object, em_value_t value) {
 	}
 
 	em_value_incref(value);
+}
+
+/* determine if value is list */
+EM_API em_bool_t em_is_list(em_value_t v) {
+
+	return v.type == EM_VALUE_TYPE_OBJECT &&
+	       EM_OBJECT_FROM_VALUE(v)->type == &type;
 }

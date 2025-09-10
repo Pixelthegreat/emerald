@@ -19,6 +19,7 @@ typedef struct em_object_type {
 	em_value_t (*subtract)(em_value_t, em_value_t, em_pos_t *);
 	em_value_t (*multiply)(em_value_t, em_value_t, em_pos_t *);
 	em_value_t (*divide)(em_value_t, em_value_t, em_pos_t *);
+	em_value_t (*modulo)(em_value_t, em_value_t, em_pos_t *);
 	em_value_t (*or)(em_value_t, em_value_t, em_pos_t *);
 	em_value_t (*and)(em_value_t, em_value_t, em_pos_t *);
 	em_value_t (*shift_left)(em_value_t, em_value_t, em_pos_t *);
@@ -31,6 +32,8 @@ typedef struct em_object_type {
 	em_value_t (*get_by_index)(em_value_t, em_value_t, em_pos_t *);
 	em_result_t (*set_by_hash)(em_value_t, em_hash_t, em_value_t, em_pos_t *);
 	em_result_t (*set_by_index)(em_value_t, em_value_t, em_value_t, em_pos_t *);
+	em_value_t (*call)(struct em_context *, em_value_t, em_value_t *, size_t, em_pos_t *);
+	em_value_t (*length_of)(em_value_t, em_pos_t *);
 	em_value_t (*to_string)(em_value_t, em_pos_t *);
 } em_object_type_t;
 
@@ -57,6 +60,7 @@ EM_API em_value_t em_object_add(em_value_t a, em_value_t b, em_pos_t *pos); /* a
 EM_API em_value_t em_object_subtract(em_value_t a, em_value_t b, em_pos_t *pos); /* subtract objects */
 EM_API em_value_t em_object_multiply(em_value_t a, em_value_t b, em_pos_t *pos); /* multiply objects */
 EM_API em_value_t em_object_divide(em_value_t a, em_value_t b, em_pos_t *pos); /* divide objects */
+EM_API em_value_t em_object_modulo(em_value_t a, em_value_t b, em_pos_t *pos); /* modulo objects */
 EM_API em_value_t em_object_or(em_value_t a, em_value_t b, em_pos_t *pos); /* or objects */
 EM_API em_value_t em_object_and(em_value_t a, em_value_t b, em_pos_t *pos); /* and objects */
 EM_API em_value_t em_object_shift_left(em_value_t a, em_value_t b, em_pos_t *pos); /* shift left */
@@ -69,6 +73,8 @@ EM_API em_value_t em_object_get_by_hash(em_value_t v, em_hash_t hash, em_pos_t *
 EM_API em_value_t em_object_get_by_index(em_value_t v, em_value_t i, em_pos_t *pos); /* get value by index */
 EM_API em_result_t em_object_set_by_hash(em_value_t a, em_hash_t hash, em_value_t b, em_pos_t *pos); /* set value by key hash */
 EM_API em_result_t em_object_set_by_index(em_value_t a, em_value_t i, em_value_t b, em_pos_t *pos); /* set value by index */
+EM_API em_value_t em_object_call(struct em_context *context, em_value_t v, em_value_t *args, size_t nargs, em_pos_t *pos); /* call object */
+EM_API em_value_t em_object_length_of(em_value_t v, em_pos_t *pos); /* get length of object */
 EM_API em_value_t em_object_to_string(em_value_t v, em_pos_t *pos); /* get string representation of object */
 
 #endif /* EMERALD_OBJECT_H */

@@ -16,6 +16,8 @@
 #include <emerald/string.h>
 #include <emerald/map.h>
 #include <emerald/list.h>
+#include <emerald/none.h>
+#include <emerald/function.h>
 #include <emerald/context.h>
 
 /* visitors */
@@ -30,7 +32,14 @@ static em_value_t (*visitors[EM_NODE_TYPE_COUNT])(em_context_t *, em_node_t *) =
 	[EM_NODE_TYPE_UNARY_OPERATION] = em_context_visit_unary_operation,
 	[EM_NODE_TYPE_BINARY_OPERATION] = em_context_visit_binary_operation,
 	[EM_NODE_TYPE_ACCESS] = em_context_visit_access,
+	[EM_NODE_TYPE_CALL] = em_context_visit_call,
 	[EM_NODE_TYPE_LET] = em_context_visit_let,
+	[EM_NODE_TYPE_IF] = em_context_visit_if,
+	[EM_NODE_TYPE_FOR] = em_context_visit_for,
+	[EM_NODE_TYPE_FOREACH] = em_context_visit_foreach,
+	[EM_NODE_TYPE_WHILE] = em_context_visit_while,
+	[EM_NODE_TYPE_FUNC] = em_context_visit_func,
+	[EM_NODE_TYPE_PUTS] = em_context_visit_puts,
 };
 
 /* NOTE: Always leave pathbuf1 for reuse, even if used previously */
@@ -172,6 +181,7 @@ EM_API em_result_t em_context_push_scope(em_context_t *context) {
 	em_value_incref(map);
 
 	context->scopestack[context->nscopestack++] = map;
+	return EM_RESULT_SUCCESS;
 }
 
 /* pop scope from stack */
@@ -313,7 +323,7 @@ EM_API em_value_t em_context_visit(em_context_t *context, em_node_t *node) {
 EM_API em_value_t em_context_visit_block(em_context_t *context, em_node_t *node) {
 
 	em_node_t *cur = node->first;
-	em_value_t value = EM_VALUE_INT(0);
+	em_value_t value = em_none;
 	while (cur) {
 
 		value = em_context_visit(context, cur);
@@ -480,36 +490,54 @@ EM_API em_value_t em_context_visit_binary_operation(em_context_t *context, em_no
 	/* operation */
 	em_value_t result;
 
-	if (!strcmp(token->value, "+"))
+	if (token->type == EM_TOKEN_TYPE_PLUS)
 		result = em_value_add(left, right, &node->pos);
-	else if (!strcmp(token->value, "-"))
+
+	else if (token->type == EM_TOKEN_TYPE_MINUS)
 		result = em_value_subtract(left, right, &node->pos);
-	else if (!strcmp(token->value, "*"))
+
+	else if (token->type == EM_TOKEN_TYPE_ASTERISK)
 		result = em_value_multiply(left, right, &node->pos);
-	else if (!strcmp(token->value, "/"))
+
+	else if (token->type == EM_TOKEN_TYPE_SLASH)
 		result = em_value_divide(left, right, &node->pos);
-	else if (!strcmp(token->value, "|"))
+
+	else if (token->type == EM_TOKEN_TYPE_MODULO)
+		result = em_value_modulo(left, right, &node->pos);
+
+	else if (token->type == EM_TOKEN_TYPE_BITWISE_OR)
 		result = em_value_or(left, right, &node->pos);
-	else if (!strcmp(token->value, "&"))
+
+	else if (token->type == EM_TOKEN_TYPE_BITWISE_AND)
 		result = em_value_and(left, right, &node->pos);
-	else if (!strcmp(token->value, "<<"))
+
+	else if (token->type == EM_TOKEN_TYPE_BITWISE_LEFT_SHIFT)
 		result = em_value_shift_left(left, right, &node->pos);
-	else if (!strcmp(token->value, ">>"))
+
+	else if (token->type == EM_TOKEN_TYPE_BITWISE_RIGHT_SHIFT)
 		result = em_value_shift_right(left, right, &node->pos);
-	else if (!strcmp(token->value, "=="))
+
+	else if (token->type == EM_TOKEN_TYPE_DOUBLE_EQUALS)
 		result = em_value_compare_equal(left, right, &node->pos);
-	else if (!strcmp(token->value, "<"))
+
+	else if (token->type == EM_TOKEN_TYPE_LESS_THAN)
 		result = em_value_compare_less_than(left, right, &node->pos);
-	else if (!strcmp(token->value, "<="))
+
+	else if (token->type == EM_TOKEN_TYPE_LESS_THAN_EQUALS)
 		result = EM_VALUE_INT_INV(em_value_compare_greater_than(left, right, &node->pos));
-	else if (!strcmp(token->value, ">"))
+
+	else if (token->type == EM_TOKEN_TYPE_GREATER_THAN)
 		result = em_value_compare_greater_than(left, right, &node->pos);
-	else if (!strcmp(token->value, ">="))
+
+	else if (token->type == EM_TOKEN_TYPE_GREATER_THAN_EQUALS)
 		result = EM_VALUE_INT_INV(em_value_compare_less_than(left, right, &node->pos));
+
 	else if (!strcmp(token->value, "or"))
 		result = em_value_compare_or(left, right, &node->pos);
+
 	else if (!strcmp(token->value, "and"))
 		result = em_value_compare_and(left, right, &node->pos);
+
 	else {
 		em_log_runtime_error(&node->pos, "Unsupported operation ('%s')", token->value);
 		result = EM_VALUE_FAIL;
@@ -555,6 +583,41 @@ EM_API em_value_t em_context_visit_access(em_context_t *context, em_node_t *node
 
 	em_value_delete(index);
 	return value;
+}
+
+/* visit call */
+EM_API em_value_t em_context_visit_call(em_context_t *context, em_node_t *node) {
+
+	em_node_t *call_node = node->first;
+
+	em_value_t call = em_context_visit(context, call_node);
+	if (!EM_VALUE_OK(call)) return EM_VALUE_FAIL;
+
+	em_value_t args[EM_FUNCTION_MAX_ARGUMENTS];
+	size_t nargs = 0;
+
+	/* get argument values */
+	em_node_t *arg_node = call_node->next;
+	while (arg_node && nargs < EM_FUNCTION_MAX_ARGUMENTS) {
+
+		args[nargs] = em_context_visit(context, arg_node);
+		if (!EM_VALUE_OK(args[nargs])) {
+
+			for (size_t i = 0; i < nargs; i++)
+				em_value_delete(args[i]);
+			em_value_delete(call);
+			return EM_VALUE_FAIL;
+		}
+		arg_node = arg_node->next;
+		nargs++;
+	}
+
+	em_value_t result = em_value_call(context, call, args, nargs, &node->pos);
+
+	for (size_t i = 0; i < nargs; i++)
+		em_value_delete(args[i]);
+	em_value_delete(call);
+	return result;
 }
 
 /* visit let statement */
@@ -639,6 +702,246 @@ EM_API em_value_t em_context_visit_let(em_context_t *context, em_node_t *node) {
 
 	em_value_delete(index);
 	return value;
+}
+
+/* visit if statement */
+EM_API em_value_t em_context_visit_if(em_context_t *context, em_node_t *node) {
+
+	em_node_t *condition_node = node->first;
+	em_node_t *body_node = condition_node->next;
+
+	em_value_t return_value = em_none;
+
+	em_value_t condition = em_context_visit(context, condition_node);
+	if (!EM_VALUE_OK(condition)) return EM_VALUE_FAIL;
+
+	if (em_value_is_true(condition, &condition_node->pos).value.te_inttype) {
+
+		em_value_t body = em_context_visit(context, body_node);
+		return_value = body;
+
+		if (!EM_VALUE_OK(body)) {
+
+			em_value_delete(condition);
+			return EM_VALUE_FAIL;
+		}
+	}
+	em_value_delete(condition);
+
+	/* evaluate elif and else statements */
+	condition_node = body_node->next;
+	body_node = condition_node? condition_node->next: NULL;
+
+	while (condition_node) {
+
+		/* is else statement */
+		if (!body_node) {
+
+			body_node = condition_node;
+			condition_node = NULL;
+		}
+
+		em_bool_t truthiness = EM_TRUE;
+		if (condition_node) {
+
+			em_value_t condition = em_context_visit(context, condition_node);
+			if (!EM_VALUE_OK(condition)) {
+
+				em_value_delete(return_value);
+				return EM_VALUE_FAIL;
+			}
+
+			truthiness = em_value_is_true(condition, &condition_node->pos).value.te_inttype? EM_TRUE: EM_FALSE;
+			em_value_delete(condition);
+		}
+
+		/* evaluate body */
+		if (truthiness) {
+
+			em_value_t body = em_context_visit(context, body_node);
+			em_value_delete(return_value);
+
+			if (!EM_VALUE_OK(body))
+				return EM_VALUE_FAIL;
+			return_value = body;
+		}
+
+		condition_node = body_node->next;
+		body_node = condition_node? condition_node->next: NULL;
+	}
+	return return_value;
+}
+
+/* visit for statement */
+EM_API em_value_t em_context_visit_for(em_context_t *context, em_node_t *node) {
+
+	em_token_t *name_token = em_node_get_token(node, 0);
+	em_node_t *start_node = node->first;
+	em_node_t *end_node = start_node->next;
+	em_node_t *body_node = end_node->next;
+
+	em_value_t start = em_context_visit(context, start_node);
+	if (!EM_VALUE_OK(start)) return EM_VALUE_FAIL;
+
+	em_value_t end = em_context_visit(context, end_node);
+	if (!EM_VALUE_OK(end)) {
+
+		em_value_delete(start);
+		return EM_VALUE_FAIL;
+	}
+
+	if (start.type != EM_VALUE_TYPE_INT || end.type != EM_VALUE_TYPE_INT) {
+
+		em_log_runtime_error(&node->pos, "Expected integers for start and end values");
+		em_value_delete(start);
+		em_value_delete(end);
+		return EM_VALUE_FAIL;
+	}
+
+	/* evaluate body */
+	em_value_t result = em_none;
+	for (em_inttype_t i = start.value.te_inttype; i < end.value.te_inttype; i++) {
+
+		em_context_set_value(context, em_utf8_strhash(name_token->value), EM_VALUE_INT(i));
+		em_value_delete(result);
+
+		result = em_context_visit(context, body_node);
+		if (!EM_VALUE_OK(result)) return EM_VALUE_FAIL;
+	}
+	return result;
+}
+
+/* visit foreach statement */
+EM_API em_value_t em_context_visit_foreach(em_context_t *context, em_node_t *node) {
+
+	em_token_t *name_token = em_node_get_token(node, 0);
+	em_node_t *iterable_node = node->first;
+	em_node_t *body_node = iterable_node->next;
+
+	em_value_t iterable = em_context_visit(context, iterable_node);
+	if (!EM_VALUE_OK(iterable)) return EM_VALUE_FAIL;
+
+	em_value_t length = em_value_length_of(iterable, &node->pos);
+	if (!EM_VALUE_OK(length)) {
+
+		em_value_delete(iterable);
+		return EM_VALUE_FAIL;
+	}
+
+	/* evaluate body */
+	em_value_t result = em_none;
+	for (em_inttype_t i = 0; i < length.value.te_inttype; i++) {
+
+		em_value_t value = em_value_get_by_index(iterable, EM_VALUE_INT(i), &node->pos);
+		em_value_delete(result);
+
+		if (!EM_VALUE_OK(value)) {
+
+			if (!em_log_catch(NULL))
+				em_log_runtime_error(&node->pos, "Couldn't finish iteration");
+			em_value_delete(iterable);
+			return EM_VALUE_FAIL;
+		}
+		em_context_set_value(context, em_utf8_strhash(name_token->value), value);
+
+		result = em_context_visit(context, body_node);
+		if (!EM_VALUE_OK(result)) {
+
+			em_value_delete(iterable);
+			return EM_VALUE_FAIL;
+		}
+	}
+	em_value_delete(iterable);
+	return result;
+}
+
+/* visit while statement */
+EM_API em_value_t em_context_visit_while(em_context_t *context, em_node_t *node) {
+
+	em_node_t *condition_node = node->first;
+	em_node_t *body_node = condition_node->next;
+
+	em_value_t condition = em_context_visit(context, condition_node);
+	if (!EM_VALUE_OK(condition)) return EM_VALUE_FAIL;
+
+	em_value_t result = em_none;
+	while (em_value_is_true(condition, &node->pos).value.te_inttype) {
+
+		em_value_delete(condition);
+		em_value_delete(result);
+
+		result = em_context_visit(context, body_node);
+		if (!EM_VALUE_OK(result)) return EM_VALUE_FAIL;
+
+		condition = em_context_visit(context, condition_node);
+		if (!EM_VALUE_OK(condition)) {
+
+			em_value_delete(result);
+			return EM_VALUE_FAIL;
+		}
+	}
+	em_value_delete(condition);
+	return result;
+}
+
+/* visit func statement */
+EM_API em_value_t em_context_visit_func(em_context_t *context, em_node_t *node) {
+
+	size_t firstarg = 0;
+	const char *name = "<anonymous>";
+	if (node->flags) name = em_node_get_token(node, firstarg++)->value;
+
+	em_node_t *body_node = node->first;
+
+	/* collect arguments */
+	size_t nargnames = 0;
+	const char *argnames[EM_FUNCTION_MAX_ARGUMENTS];
+
+	while (nargnames < EM_FUNCTION_MAX_ARGUMENTS) {
+
+		em_token_t *token = em_node_get_token(node, firstarg + nargnames);
+		if (!token) break;
+
+		argnames[nargnames++] = token->value;
+	}
+
+	/* set value */
+	em_value_t value = em_function_new(node, body_node, name, nargnames, argnames);
+	if (node->flags) em_context_set_value(context, em_utf8_strhash(name), value);
+
+	return value;
+}
+
+/* visit puts statement */
+EM_API em_value_t em_context_visit_puts(em_context_t *context, em_node_t *node) {
+
+	em_node_t *cur = node->first;
+
+	em_value_t result = em_none;
+	while (cur) {
+
+		em_value_delete(result);
+
+		result = em_context_visit(context, cur);
+		if (!EM_VALUE_OK(result)) return EM_VALUE_FAIL;
+
+		em_value_t string = em_value_to_string(result, &node->pos);
+		if (!EM_VALUE_OK(string)) {
+
+			em_value_delete(result);
+			return EM_VALUE_FAIL;
+		}
+
+		em_string_t *strobject = EM_STRING(EM_OBJECT_FROM_VALUE(string));
+		em_wchar_write(stdout, strobject->data, strobject->length);
+		if (cur->next) fprintf(stdout, " ");
+
+		if (result.type != string.type || result.value.t_voidp != string.value.t_voidp)
+			em_value_delete(string);
+		cur = cur->next;
+	}
+	fprintf(stdout, "\n");
+	return result;
 }
 
 /* destroy context */

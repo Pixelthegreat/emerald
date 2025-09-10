@@ -30,5 +30,6 @@ typedef struct em_map {
 EM_API em_value_t em_map_new(void); /* create map */
 EM_API void em_map_set(em_value_t object, em_hash_t key, em_value_t value); /* set value */
 EM_API em_value_t em_map_get(em_value_t object, em_hash_t key); /* get value */
+EM_API em_bool_t em_is_map(em_value_t v); /* determine if value is map */
 
 #endif /* EMERALD_MAP_H */

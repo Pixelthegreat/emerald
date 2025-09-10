@@ -27,5 +27,10 @@
 #include <emerald/string.h>
 #include <emerald/map.h>
 #include <emerald/list.h>
+#include <emerald/function.h>
+#include <emerald/none.h>
+#include <emerald/util.h>
+#include <emerald/module.h>
+#include <emerald/module/site.h>
 
 #endif /* EMERALD_H */

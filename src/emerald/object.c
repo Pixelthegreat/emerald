@@ -78,6 +78,17 @@ EM_API em_value_t em_object_divide(em_value_t a, em_value_t b, em_pos_t *pos) {
 	return object->type->divide(a, b, pos);
 }
 
+/* modulo objects */
+EM_API em_value_t em_object_modulo(em_value_t a, em_value_t b, em_pos_t *pos) {
+
+	em_object_t *object = EM_OBJECT_FROM_VALUE(a);
+	em_object_t *other = EM_OBJECT_FROM_VALUE(b);
+
+	if (!object->type->modulo) INVALID_OPERATION;
+
+	return object->type->modulo(a, b, pos);
+}
+
 /* or objects */
 EM_API em_value_t em_object_or(em_value_t a, em_value_t b, em_pos_t *pos) {
 
@@ -198,6 +209,24 @@ EM_API em_result_t em_object_set_by_index(em_value_t a, em_value_t i, em_value_t
 	if (!object->type->set_by_index) INVALID_OPERATION_RETURN(EM_RESULT_FAILURE);
 
 	return object->type->set_by_index(a, i, b, pos);
+}
+
+/* call object */
+EM_API em_value_t em_object_call(struct em_context *context, em_value_t v, em_value_t *args, size_t nargs, em_pos_t *pos) {
+
+	em_object_t *object = EM_OBJECT_FROM_VALUE(v);
+	if (!object->type->call) INVALID_OPERATION;
+
+	return object->type->call(context, v, args, nargs, pos);
+}
+
+/* get length of object */
+EM_API em_value_t em_object_length_of(em_value_t v, em_pos_t *pos) {
+
+	em_object_t *object = EM_OBJECT_FROM_VALUE(v);
+	if (!object->type->length_of) INVALID_OPERATION;
+
+	return object->type->length_of(v, pos);
 }
 
 /* get string representation of object */

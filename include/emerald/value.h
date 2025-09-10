@@ -47,6 +47,7 @@ EM_API em_value_t em_value_add(em_value_t a, em_value_t b, em_pos_t *pos); /* ad
 EM_API em_value_t em_value_subtract(em_value_t a, em_value_t b, em_pos_t *pos); /* subtract values */
 EM_API em_value_t em_value_multiply(em_value_t a, em_value_t b, em_pos_t *pos); /* multiply values */
 EM_API em_value_t em_value_divide(em_value_t a, em_value_t b, em_pos_t *pos); /* divide values */
+EM_API em_value_t em_value_modulo(em_value_t a, em_value_t b, em_pos_t *pos); /* modulo values */
 EM_API em_value_t em_value_or(em_value_t a, em_value_t b, em_pos_t *pos); /* or values */
 EM_API em_value_t em_value_and(em_value_t a, em_value_t b, em_pos_t *pos); /* and values */
 EM_API em_value_t em_value_shift_left(em_value_t a, em_value_t b, em_pos_t *pos); /* shift left */
@@ -61,6 +62,8 @@ EM_API em_value_t em_value_get_by_hash(em_value_t v, em_hash_t hash, em_pos_t *p
 EM_API em_value_t em_value_get_by_index(em_value_t v, em_value_t i, em_pos_t *pos); /* get value by index value */
 EM_API em_result_t em_value_set_by_hash(em_value_t a, em_hash_t hash, em_value_t b, em_pos_t *pos); /* set value by key hash */
 EM_API em_result_t em_value_set_by_index(em_value_t a, em_value_t i, em_value_t b, em_pos_t *pos); /* set value by index */
+EM_API em_value_t em_value_call(struct em_context *context, em_value_t v, em_value_t *args, size_t nargs, em_pos_t *pos); /* call value */
+EM_API em_value_t em_value_length_of(em_value_t v, em_pos_t *pos); /* get value length */
 EM_API em_value_t em_value_to_string(em_value_t v, em_pos_t *pos); /* get string representation of value */
 EM_API void em_value_log(em_value_t v); /* log value */
 

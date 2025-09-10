@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include <emerald/core.h>
 #include <emerald/wchar.h>
 #include <emerald/object.h>
@@ -24,6 +25,7 @@ static em_value_t add_int(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t subtract_int(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t multiply_int(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t divide_int(em_value_t a, em_value_t b, em_pos_t *pos);
+static em_value_t modulo_int(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t or_int(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t and_int(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t shift_left_int(em_value_t a, em_value_t b, em_pos_t *pos);
@@ -39,6 +41,7 @@ static em_value_t add_float(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t subtract_float(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t multiply_float(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t divide_float(em_value_t a, em_value_t b, em_pos_t *pos);
+static em_value_t modulo_float(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t compare_equal_float(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t compare_less_than_float(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t compare_greater_than_float(em_value_t a, em_value_t b, em_pos_t *pos);
@@ -51,6 +54,7 @@ struct {
 	em_value_t (*subtract)(em_value_t, em_value_t, em_pos_t *);
 	em_value_t (*multiply)(em_value_t, em_value_t, em_pos_t *);
 	em_value_t (*divide)(em_value_t, em_value_t, em_pos_t *);
+	em_value_t (*modulo)(em_value_t, em_value_t, em_pos_t *);
 	em_value_t (*or)(em_value_t, em_value_t, em_pos_t *);
 	em_value_t (*and)(em_value_t, em_value_t, em_pos_t *);
 	em_value_t (*shift_left)(em_value_t, em_value_t, em_pos_t *);
@@ -63,6 +67,8 @@ struct {
 	em_value_t (*get_by_index)(em_value_t, em_value_t, em_pos_t *);
 	em_result_t (*set_by_hash)(em_value_t, em_hash_t, em_value_t, em_pos_t *);
 	em_result_t (*set_by_index)(em_value_t, em_value_t, em_value_t, em_pos_t *);
+	em_value_t (*call)(struct em_context *, em_value_t, em_value_t *, size_t, em_pos_t *);
+	em_value_t (*length_of)(em_value_t, em_pos_t *);
 	em_value_t (*to_string)(em_value_t, em_pos_t *);
 
 } ops[EM_VALUE_TYPE_COUNT] = {
@@ -72,6 +78,7 @@ struct {
 		.subtract = subtract_int,
 		.multiply = multiply_int,
 		.divide = divide_int,
+		.modulo = modulo_int,
 		.or = or_int,
 		.and = and_int,
 		.shift_left = shift_left_int,
@@ -88,6 +95,7 @@ struct {
 		.subtract = subtract_float,
 		.multiply = multiply_float,
 		.divide = divide_float,
+		.modulo = modulo_float,
 		.compare_equal = compare_equal_float,
 		.compare_less_than = compare_less_than_float,
 		.compare_greater_than = compare_greater_than_float,
@@ -100,6 +108,7 @@ struct {
 		.subtract = em_object_subtract,
 		.multiply = em_object_multiply,
 		.divide = em_object_divide,
+		.modulo = em_object_modulo,
 		.or = em_object_or,
 		.and = em_object_and,
 		.shift_left = em_object_shift_left,
@@ -112,6 +121,8 @@ struct {
 		.get_by_index = em_object_get_by_index,
 		.set_by_hash = em_object_set_by_hash,
 		.set_by_index = em_object_set_by_index,
+		.call = em_object_call,
+		.length_of = em_object_length_of,
 		.to_string = em_object_to_string,
 	},
 };
@@ -169,6 +180,19 @@ static em_value_t divide_int(em_value_t a, em_value_t b, em_pos_t *pos) {
 			return EM_VALUE_INT(a.value.te_inttype / b.value.te_inttype);
 		case EM_VALUE_TYPE_FLOAT:
 			return EM_VALUE_FLOAT((em_floattype_t)a.value.te_inttype / b.value.te_floattype);
+		default:
+			INVALID_OPERATION;
+	}
+}
+
+/* modulo ints */
+static em_value_t modulo_int(em_value_t a, em_value_t b, em_pos_t *pos) {
+
+	switch (b.type) {
+		case EM_VALUE_TYPE_INT:
+			return EM_VALUE_INT(a.value.te_inttype % b.value.te_inttype);
+		case EM_VALUE_TYPE_FLOAT:
+			return EM_VALUE_FLOAT(EM_FLOATTYPE_MOD((em_floattype_t)a.value.te_inttype, b.value.te_floattype));
 		default:
 			INVALID_OPERATION;
 	}
@@ -318,6 +342,19 @@ static em_value_t divide_float(em_value_t a, em_value_t b, em_pos_t *pos) {
 	}
 }
 
+/* modulo floats */
+static em_value_t modulo_float(em_value_t a, em_value_t b, em_pos_t *pos) {
+
+	switch (b.type) {
+		case EM_VALUE_TYPE_INT:
+			return EM_VALUE_FLOAT(EM_FLOATTYPE_MOD(a.value.te_floattype, (em_floattype_t)b.value.te_inttype));
+		case EM_VALUE_TYPE_FLOAT:
+			return EM_VALUE_FLOAT(EM_FLOATTYPE_MOD(a.value.te_floattype, b.value.te_floattype));
+		default:
+			INVALID_OPERATION;
+	}
+}
+
 /* compare if floats are equal */
 static em_value_t compare_equal_float(em_value_t a, em_value_t b, em_pos_t *pos) {
 
@@ -428,6 +465,12 @@ EM_API em_value_t em_value_divide(em_value_t a, em_value_t b, em_pos_t *pos) {
 	return ops[a.type].divide(a, b, pos);
 }
 
+/* modulo values */
+EM_API em_value_t em_value_modulo(em_value_t a, em_value_t b, em_pos_t *pos) {
+
+	return ops[a.type].modulo(a, b, pos);
+}
+
 /* or values */
 EM_API em_value_t em_value_or(em_value_t a, em_value_t b, em_pos_t *pos) {
 
@@ -534,6 +577,22 @@ EM_API em_result_t em_value_set_by_index(em_value_t a, em_value_t i, em_value_t 
 	if (ops[a.type].set_by_index) return ops[a.type].set_by_index(a, i, b, pos);
 
 	INVALID_OPERATION_RETURN(EM_RESULT_FAILURE);
+}
+
+/* call value */
+EM_API em_value_t em_value_call(struct em_context *context, em_value_t v, em_value_t *args, size_t nargs, em_pos_t *pos) {
+
+	if (ops[v.type].call) return ops[v.type].call(context, v, args, nargs, pos);
+
+	INVALID_OPERATION;
+}
+
+/* get value length */
+EM_API em_value_t em_value_length_of(em_value_t v, em_pos_t *pos) {
+
+	if (ops[v.type].length_of) return ops[v.type].length_of(v, pos);
+
+	INVALID_OPERATION;
 }
 
 /* get string representation of value */
