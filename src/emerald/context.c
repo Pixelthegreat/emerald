@@ -33,6 +33,10 @@ static em_value_t (*visitors[EM_NODE_TYPE_COUNT])(em_context_t *, em_node_t *) =
 	[EM_NODE_TYPE_BINARY_OPERATION] = em_context_visit_binary_operation,
 	[EM_NODE_TYPE_ACCESS] = em_context_visit_access,
 	[EM_NODE_TYPE_CALL] = em_context_visit_call,
+	[EM_NODE_TYPE_CONTINUE] = em_context_visit_continue,
+	[EM_NODE_TYPE_BREAK] = em_context_visit_break,
+	[EM_NODE_TYPE_RETURN] = em_context_visit_return,
+	[EM_NODE_TYPE_INCLUDE] = em_context_visit_include,
 	[EM_NODE_TYPE_LET] = em_context_visit_let,
 	[EM_NODE_TYPE_IF] = em_context_visit_if,
 	[EM_NODE_TYPE_FOR] = em_context_visit_for,
@@ -81,17 +85,15 @@ EM_API em_result_t em_context_init(em_context_t *context) {
 		return EM_RESULT_FAILURE;
 
 	/* set up initial directory stack */
-	context->ndirstack = 1;
+	context->ndirstack = 2;
 	context->dirstack[0] = ".";
-#ifndef DEBUG
-	context->ndirstack++;
 	context->dirstack[1] = EM_STDLIB_DIR;
-#endif
 	context->nscopestack = 1;
 	context->scopestack[0] = em_map_new();
 	em_value_incref(context->scopestack[0]);
 	context->rec_first = NULL;
 	context->rec_last = NULL;
+	context->pass = EM_VALUE_FAIL;
 
 	context->init = EM_TRUE;
 	return EM_RESULT_SUCCESS;
@@ -238,7 +240,7 @@ EM_API em_value_t em_context_run_file(em_context_t *context, em_pos_t *pos, cons
 	em_recfile_t *recfile = context->rec_first;
 	while (recfile) {
 		if (!strcmp(recfile->rpath, rpath))
-			return EM_VALUE_INT(0);
+			return em_none;
 		recfile = recfile->next;
 	}
 
@@ -323,16 +325,17 @@ EM_API em_value_t em_context_visit(em_context_t *context, em_node_t *node) {
 EM_API em_value_t em_context_visit_block(em_context_t *context, em_node_t *node) {
 
 	em_node_t *cur = node->first;
-	em_value_t value = em_none;
+	em_value_t result = em_none;
 	while (cur) {
 
-		value = em_context_visit(context, cur);
-		if (!EM_VALUE_OK(value)) return EM_VALUE_FAIL;
+		em_value_delete(result);
+
+		result = em_context_visit(context, cur);
+		if (!EM_VALUE_OK(result)) return EM_VALUE_FAIL;
 
 		cur = cur->next;
-		if (cur) em_value_delete(value);
 	}
-	return value;
+	return result;
 }
 
 /* visit integer */
@@ -608,6 +611,7 @@ EM_API em_value_t em_context_visit_call(em_context_t *context, em_node_t *node) 
 			em_value_delete(call);
 			return EM_VALUE_FAIL;
 		}
+		em_value_incref(args[nargs]);
 		arg_node = arg_node->next;
 		nargs++;
 	}
@@ -615,8 +619,60 @@ EM_API em_value_t em_context_visit_call(em_context_t *context, em_node_t *node) 
 	em_value_t result = em_value_call(context, call, args, nargs, &node->pos);
 
 	for (size_t i = 0; i < nargs; i++)
-		em_value_delete(args[i]);
+		em_value_decref(args[i]);
 	em_value_delete(call);
+	return result;
+}
+
+/* visit continue statement */
+EM_API em_value_t em_context_visit_continue(em_context_t *context, em_node_t *node) {
+
+	em_log_raise("SystemContinue", &node->pos, "Not in a loop");
+	return EM_VALUE_FAIL;
+}
+
+/* visit break statement */
+EM_API em_value_t em_context_visit_break(em_context_t *context, em_node_t *node) {
+
+	em_log_raise("SystemBreak", &node->pos, "Not in a loop");
+	return EM_VALUE_FAIL;
+}
+
+/* visit return statement */
+EM_API em_value_t em_context_visit_return(em_context_t *context, em_node_t *node) {
+
+	em_node_t *value_node = node->first;
+
+	em_value_t value = em_context_visit(context, value_node);
+	if (!EM_VALUE_OK(value)) return EM_VALUE_FAIL;
+
+	context->pass = value;
+
+	em_log_raise("SystemReturn", &node->pos, "Not in a function");
+	return EM_VALUE_FAIL;
+}
+
+/* visit include statement */
+EM_API em_value_t em_context_visit_include(em_context_t *context, em_node_t *node) {
+
+	em_node_t *path_node = node->first;
+
+	em_value_t path = em_context_visit(context, path_node);
+	if (!EM_VALUE_OK(path)) return EM_VALUE_FAIL;
+
+	if (!em_is_string(path)) {
+
+		em_log_runtime_error(&path_node->pos, "Expected string for path");
+		em_value_delete(path);
+		return EM_VALUE_FAIL;
+	}
+
+	const em_wchar_t *wpath = EM_STRING(EM_OBJECT_FROM_VALUE(path))->data;
+	em_wpath_fix(pathbuf2, PATHBUFSZ, wpath);
+
+	em_value_t result = em_context_run_file(context, &node->pos, pathbuf2);
+	em_value_delete(path);
+
 	return result;
 }
 
@@ -710,17 +766,15 @@ EM_API em_value_t em_context_visit_if(em_context_t *context, em_node_t *node) {
 	em_node_t *condition_node = node->first;
 	em_node_t *body_node = condition_node->next;
 
-	em_value_t return_value = em_none;
+	em_value_t result = em_none;
 
 	em_value_t condition = em_context_visit(context, condition_node);
 	if (!EM_VALUE_OK(condition)) return EM_VALUE_FAIL;
 
 	if (em_value_is_true(condition, &condition_node->pos).value.te_inttype) {
 
-		em_value_t body = em_context_visit(context, body_node);
-		return_value = body;
-
-		if (!EM_VALUE_OK(body)) {
+		result = em_context_visit(context, body_node);
+		if (!EM_VALUE_OK(result)) {
 
 			em_value_delete(condition);
 			return EM_VALUE_FAIL;
@@ -747,7 +801,7 @@ EM_API em_value_t em_context_visit_if(em_context_t *context, em_node_t *node) {
 			em_value_t condition = em_context_visit(context, condition_node);
 			if (!EM_VALUE_OK(condition)) {
 
-				em_value_delete(return_value);
+				em_value_delete(result);
 				return EM_VALUE_FAIL;
 			}
 
@@ -758,18 +812,17 @@ EM_API em_value_t em_context_visit_if(em_context_t *context, em_node_t *node) {
 		/* evaluate body */
 		if (truthiness) {
 
-			em_value_t body = em_context_visit(context, body_node);
-			em_value_delete(return_value);
+			em_value_delete(result);
 
-			if (!EM_VALUE_OK(body))
+			result = em_context_visit(context, body_node);
+			if (!EM_VALUE_OK(result))
 				return EM_VALUE_FAIL;
-			return_value = body;
 		}
 
 		condition_node = body_node->next;
 		body_node = condition_node? condition_node->next: NULL;
 	}
-	return return_value;
+	return result;
 }
 
 /* visit for statement */
@@ -806,7 +859,23 @@ EM_API em_value_t em_context_visit_for(em_context_t *context, em_node_t *node) {
 		em_value_delete(result);
 
 		result = em_context_visit(context, body_node);
-		if (!EM_VALUE_OK(result)) return EM_VALUE_FAIL;
+		if (!EM_VALUE_OK(result)) {
+
+			/* continue or break statement */
+			if (em_log_catch("SystemContinue")) {
+
+				result = em_none;
+				em_log_clear();
+				continue;
+			}
+			if (em_log_catch("SystemBreak")) {
+
+				result = em_none;
+				em_log_clear();
+				break;
+			}
+			else return EM_VALUE_FAIL;
+		}
 	}
 	return result;
 }
@@ -847,8 +916,24 @@ EM_API em_value_t em_context_visit_foreach(em_context_t *context, em_node_t *nod
 		result = em_context_visit(context, body_node);
 		if (!EM_VALUE_OK(result)) {
 
-			em_value_delete(iterable);
-			return EM_VALUE_FAIL;
+			/* continue or break statement */
+			if (em_log_catch("SystemContinue")) {
+
+				result = em_none;
+				em_log_clear();
+				continue;
+			}
+			if (em_log_catch("SystemBreak")) {
+
+				result = em_none;
+				em_log_clear();
+				break;
+			}
+			else {
+
+				em_value_delete(iterable);
+				return EM_VALUE_FAIL;
+			}
 		}
 	}
 	em_value_delete(iterable);
@@ -871,7 +956,23 @@ EM_API em_value_t em_context_visit_while(em_context_t *context, em_node_t *node)
 		em_value_delete(result);
 
 		result = em_context_visit(context, body_node);
-		if (!EM_VALUE_OK(result)) return EM_VALUE_FAIL;
+		if (!EM_VALUE_OK(result)) {
+
+			/* continue or break statement */
+			if (em_log_catch("SystemContinue")) {
+
+				result = em_none;
+				em_log_clear();
+				continue;
+			}
+			if (em_log_catch("SystemBreak")) {
+
+				result = em_none;
+				em_log_clear();
+				break;
+			}
+			else return EM_VALUE_FAIL;
+		}
 
 		condition = em_context_visit(context, condition_node);
 		if (!EM_VALUE_OK(condition)) {

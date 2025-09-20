@@ -21,6 +21,8 @@ typedef enum em_log_level {
 	EM_LOG_LEVEL_COUNT,
 } em_log_level_t;
 
+EM_API em_log_level_t em_log_hide_level;
+
 /* error position */
 typedef struct em_pos {
 	const char *path; /* file path */
@@ -43,6 +45,7 @@ EM_API void em_log_error(const em_pos_t *pos, const char *fmt, ...); /* log an e
 EM_API void em_log_verror(const em_pos_t *pos, const char *fmt, va_list args); /* log an error with va_list */
 EM_API void em_log_raise(const char *name, const em_pos_t *pos, const char *fmt, ...); /* raise an error */
 EM_API em_bool_t em_log_catch(const char *name); /* check if raised error has such name */
+EM_API void em_log_clear(void); /* clear raised error */
 EM_API void em_log_flush(void); /* print raised error if present */
 EM_API void em_log_begin(em_log_level_t level); /* begin log message */
 EM_API void em_log_printf(const char *fmt, ...); /* print log message */

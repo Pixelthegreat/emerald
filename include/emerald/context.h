@@ -30,6 +30,7 @@ typedef struct em_context {
 	size_t nscopestack; /* number of scopes in stack */
 	em_recfile_t *rec_first; /* first run file */
 	em_recfile_t *rec_last; /* last run file */
+	em_value_t pass; /* value to pass down for return statement */
 } em_context_t;
 
 #define EM_CONTEXT_INIT ((em_context_t){EM_FALSE})
@@ -59,6 +60,10 @@ EM_API em_value_t em_context_visit_unary_operation(em_context_t *context, em_nod
 EM_API em_value_t em_context_visit_binary_operation(em_context_t *context, em_node_t *node); /* visit binary operation */
 EM_API em_value_t em_context_visit_access(em_context_t *context, em_node_t *node); /* visit member access */
 EM_API em_value_t em_context_visit_call(em_context_t *context, em_node_t *node); /* visit call */
+EM_API em_value_t em_context_visit_continue(em_context_t *context, em_node_t *node); /* visit continue statement */
+EM_API em_value_t em_context_visit_break(em_context_t *context, em_node_t *node); /* visit break statement */
+EM_API em_value_t em_context_visit_return(em_context_t *context, em_node_t *node); /* visit return statement */
+EM_API em_value_t em_context_visit_include(em_context_t *context, em_node_t *node); /* visit include statement */
 EM_API em_value_t em_context_visit_let(em_context_t *context, em_node_t *node); /* visit let statement */
 EM_API em_value_t em_context_visit_if(em_context_t *context, em_node_t *node); /* visit if statement */
 EM_API em_value_t em_context_visit_for(em_context_t *context, em_node_t *node); /* visit for statement */

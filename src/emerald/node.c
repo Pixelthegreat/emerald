@@ -84,6 +84,7 @@ EM_API em_node_t *em_node_new(em_node_type_t type, em_pos_t *pos) {
 	em_node_t *node = EM_NODE(em_refobj_new(&em_reflist_node, sizeof(em_node_t), EM_CLEANUP_MODE_IMMEDIATE));
 	if (!node) return NULL;
 
+	EM_NODE_INCREF(node);
 	EM_REFOBJ(node)->free = node_free;
 
 	node->type = type;
@@ -98,7 +99,7 @@ EM_API em_node_t *em_node_new(em_node_type_t type, em_pos_t *pos) {
 
 	if (em_array_init(&node->tokens) != EM_RESULT_SUCCESS) {
 
-		em_refobj_decref(EM_REFOBJ(node));
+		EM_NODE_DECREF(node);
 		return NULL;
 	}
 	return node;

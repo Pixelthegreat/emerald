@@ -22,7 +22,15 @@
  #define EM_API extern
 #endif
 
-#define EM_STDLIB_DIR "stdlib"
+#ifdef DEBUG
+ #define EM_STDLIB_DIR "./stdlib"
+#else
+ #if defined _WIN32 || defined _WIN64
+  #define EM_STDLIB_DIR "C:\\Program Files\\emerald\\lib"
+ #else
+  #define EM_STDLIB_DIR "/usr/share/emerald"
+ #endif
+#endif
 
 #define EM_INLINE static inline
 

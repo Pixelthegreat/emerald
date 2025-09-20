@@ -11,6 +11,12 @@
 #include <emerald/utf8.h>
 #include <emerald/log.h>
 
+#ifdef DEBUG
+em_log_level_t em_log_hide_level = EM_LOG_LEVEL_INFO;
+#else
+em_log_level_t em_log_hide_level = EM_LOG_LEVEL_ERROR;
+#endif
+
 #define LINEBUFSZ 128
 static char linebuf[LINEBUFSZ];
 static FILE *logfile = NULL;
@@ -75,6 +81,8 @@ EM_API void em_pos_advance(em_pos_t *pos) {
 
 /* log a basic message */
 EM_API void em_log(em_log_level_t level, const char *file, long line, const char *fmt, ...) {
+
+	if (level < em_log_hide_level) return;
 
 	em_log_begin(level);
 
@@ -147,6 +155,20 @@ EM_API em_bool_t em_log_catch(const char *name) {
 	else if (!name || !strcmp(errname, name))
 		return EM_TRUE;
 	return EM_FALSE;
+}
+
+/* clear raised error */
+EM_API void em_log_clear(void) {
+
+	if (!err) {
+
+		em_log_warning("Error not raised");
+		return;
+	}
+
+	err = EM_FALSE;
+	printerr = EM_FALSE;
+	return;
 }
 
 /* print raised error if present */

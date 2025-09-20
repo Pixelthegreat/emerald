@@ -29,8 +29,10 @@ EM_API em_result_t em_init(em_init_flag_t flags) {
 		return EM_RESULT_FAILURE;
 	if (em_reflist_init(&em_reflist_object) != EM_RESULT_SUCCESS)
 		return EM_RESULT_FAILURE;
+
 	em_none = em_none_new();
 	em_value_incref(em_none);
+
 	return EM_RESULT_SUCCESS;
 }
 

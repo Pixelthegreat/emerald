@@ -70,6 +70,12 @@ static em_value_t call(struct em_context *context, em_value_t v, em_value_t *arg
 	em_value_t result = em_context_visit(context, function->body_node);
 	em_context_pop_scope(context);
 
+	if (em_log_catch("SystemReturn")) {
+
+		em_value_delete(result);
+		em_log_clear();
+		return context->pass;
+	}
 	return result;
 }
 
