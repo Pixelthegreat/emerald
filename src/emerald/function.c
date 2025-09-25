@@ -8,8 +8,10 @@
 #include <string.h>
 #include <emerald/core.h>
 #include <emerald/log.h>
+#include <emerald/utf8.h>
 #include <emerald/hash.h>
 #include <emerald/string.h>
+#include <emerald/none.h>
 #include <emerald/context.h>
 #include <emerald/function.h>
 
@@ -45,7 +47,7 @@ static em_value_t builtin_to_string(em_value_t v, em_pos_t *pos) {
 
 	char buf[128];
 	snprintf(buf, 128, "<Builtin function '%s'>", function->name);
-	return em_string_new_from_utf8(buf, strlen(buf));
+	return em_string_new_from_utf8(buf, em_utf8_strlen(buf));
 }
 
 /* call function */
@@ -68,15 +70,18 @@ static em_value_t call(struct em_context *context, em_value_t v, em_value_t *arg
 		em_context_set_value(context, em_utf8_strhash(function->argnames[i]), args[i]);
 
 	em_value_t result = em_context_visit(context, function->body_node);
+
+	/* pop_scope may or may not delete result, so prevent it from doing so */
+	em_value_incref(result);
 	em_context_pop_scope(context);
+	em_value_decref(result);
 
 	if (em_log_catch("SystemReturn")) {
 
-		em_value_delete(result);
 		em_log_clear();
 		return context->pass;
 	}
-	return result;
+	return em_none;
 }
 
 /* get string representation of function */
@@ -86,7 +91,7 @@ static em_value_t to_string(em_value_t v, em_pos_t *pos) {
 
 	char buf[128];
 	snprintf(buf, 128, "<Function '%s'>", function->name);
-	return em_string_new_from_utf8(buf, strlen(buf));
+	return em_string_new_from_utf8(buf, em_utf8_strlen(buf));
 }
 
 /* free function */
@@ -94,7 +99,6 @@ static void function_free(void *p) {
 
 	em_function_t *function = EM_FUNCTION(p);
 
-	EM_NODE_DECREF(function->body_node);
 	EM_NODE_DECREF(function->function_node);
 }
 
@@ -119,7 +123,7 @@ EM_API em_value_t em_function_new(em_node_t *function_node, em_node_t *body_node
 	EM_REFOBJ(function)->free = function_free;
 
 	function->function_node = EM_NODE_INCREF(function_node);
-	function->body_node = EM_NODE_INCREF(body_node);
+	function->body_node = body_node;
 	function->name = name;
 	function->nargnames = nargnames;
 	memcpy(function->argnames, argnames, nargnames * sizeof(const char *));

@@ -13,7 +13,7 @@
 #include <emerald/module/site.h>
 
 /* site module */
-static em_result_t initialize(em_context_t *context);
+static em_result_t initialize(em_context_t *context, em_value_t map);
 
 em_module_t em_module_site = {
 	.initialize = initialize,
@@ -24,7 +24,7 @@ static em_value_t site_lengthOf(em_context_t *context, em_value_t *args, size_t 
 
 	em_value_t value;
 
-	if (em_util_parse_args(context, pos, args, nargs, "v", &value) != EM_RESULT_SUCCESS)
+	if (em_util_parse_args(pos, args, nargs, "v", &value) != EM_RESULT_SUCCESS)
 		return EM_VALUE_FAIL;
 
 	return em_value_length_of(value, pos);
@@ -35,7 +35,7 @@ static em_value_t site_toString(em_context_t *context, em_value_t *args, size_t 
 
 	em_value_t value;
 
-	if (em_util_parse_args(context, pos, args, nargs, "v", &value) != EM_RESULT_SUCCESS)
+	if (em_util_parse_args(pos, args, nargs, "v", &value) != EM_RESULT_SUCCESS)
 		return EM_VALUE_FAIL;
 
 	return em_value_to_string(value, pos);
@@ -46,7 +46,7 @@ static em_value_t site_append(em_context_t *context, em_value_t *args, size_t na
 
 	em_value_t list, value;
 
-	if (em_util_parse_args(context, pos, args, nargs, "lv", &list, &value) != EM_RESULT_SUCCESS)
+	if (em_util_parse_args(pos, args, nargs, "lv", &list, &value) != EM_RESULT_SUCCESS)
 		return EM_VALUE_FAIL;
 
 	em_list_append(list, value);
@@ -61,18 +61,18 @@ static em_value_t site_exit(em_context_t *context, em_value_t *args, size_t narg
 }
 
 /* initialize module */
-static em_result_t initialize(em_context_t *context) {
+static em_result_t initialize(em_context_t *context, em_value_t map) {
 
 	/* common functions */
-	em_util_set_function(context, "lengthOf", site_lengthOf);
-	em_util_set_function(context, "toString", site_toString);
-	em_util_set_function(context, "append", site_append);
-	em_util_set_function(context, "exit", site_exit);
+	em_util_set_function(map, "lengthOf", site_lengthOf);
+	em_util_set_function(map, "toString", site_toString);
+	em_util_set_function(map, "append", site_append);
+	em_util_set_function(map, "exit", site_exit);
 
 	/* common variables */
-	em_util_set_value(context, "true", EM_VALUE_TRUE);
-	em_util_set_value(context, "false", EM_VALUE_FALSE);
-	em_util_set_value(context, "none", em_none);
+	em_util_set_value(map, "true", EM_VALUE_TRUE);
+	em_util_set_value(map, "false", EM_VALUE_FALSE);
+	em_util_set_value(map, "none", em_none);
 
 	return EM_RESULT_SUCCESS;
 }

@@ -36,6 +36,7 @@ enum {
 
 	OPT_NO_EXIT_FREE_BIT = 0x10000,
 	OPT_NO_PRINT_ALLOCS_BIT = 0x20000,
+	OPT_PRINT_ALLOC_TRAFFIC_BIT = 0x40000,
 };
 static int opt_flags = 0;
 static const char *arg_filename = NULL;
@@ -73,6 +74,10 @@ static em_result_t parse_args(int argc, const char **argv) {
 			/* don't print and handle unresolved allocations after program execution */
 			else if (!strcmp(arg, "--no-print-allocs"))
 				opt_flags |= OPT_NO_PRINT_ALLOCS_BIT;
+
+			/* print allocation traffic (mallocs, reallocs and frees) */
+			else if (!strcmp(arg, "--print-alloc-traffic"))
+				opt_flags |= OPT_PRINT_ALLOC_TRAFFIC_BIT;
 
 			/* unrecognized */
 			else {
@@ -158,6 +163,8 @@ EM_API em_result_t shell_application_run(int argc, const char **argv) {
 		init_flags |= EM_INIT_FLAG_NO_EXIT_FREE;
 	if (opt_flags & OPT_NO_PRINT_ALLOCS_BIT)
 		init_flags |= EM_INIT_FLAG_NO_PRINT_ALLOCS;
+	if (opt_flags & OPT_PRINT_ALLOC_TRAFFIC_BIT)
+		init_flags |= EM_INIT_FLAG_PRINT_ALLOC_TRAFFIC;
 
 	if (em_init(init_flags) != EM_RESULT_SUCCESS)
 		return EM_RESULT_FAILURE;

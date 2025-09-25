@@ -8,6 +8,7 @@
 #include <string.h>
 #include <math.h>
 #include <emerald/core.h>
+#include <emerald/utf8.h>
 #include <emerald/wchar.h>
 #include <emerald/object.h>
 #include <emerald/string.h>
@@ -281,7 +282,7 @@ static em_value_t to_string_int(em_value_t v, em_pos_t *pos) {
 	char buf[64];
 	snprintf(buf, 64, EM_INTTYPE_FORMAT, v.value.te_inttype);
 
-	return em_string_new_from_utf8(buf, strlen(buf));
+	return em_string_new_from_utf8(buf, em_utf8_strlen(buf));
 }
 
 /* is float true */
@@ -406,7 +407,7 @@ static em_value_t to_string_float(em_value_t v, em_pos_t *pos) {
 	char buf[64];
 	snprintf(buf, 64, EM_FLOATTYPE_FORMAT, v.value.te_floattype);
 
-	return em_string_new_from_utf8(buf, strlen(buf));
+	return em_string_new_from_utf8(buf, em_utf8_strlen(buf));
 }
 
 /* increase reference count */
@@ -612,6 +613,7 @@ EM_API void em_value_log(em_value_t v) {
 	em_wchar_to_utf8(stringbuf, 1024, EM_STRING(EM_OBJECT_FROM_VALUE(string))->data);
 	em_log_info("%s", stringbuf);
 
-	if (string.value.t_voidp != v.value.t_voidp)
+	if (v.type != EM_VALUE_TYPE_OBJECT ||
+	    string.value.t_voidp != v.value.t_voidp)
 		em_value_delete(string);
 }

@@ -109,6 +109,7 @@ EM_API void em_log_error(const em_pos_t *pos, const char *fmt, ...) {
 EM_API void em_log_verror(const em_pos_t *pos, const char *fmt, va_list args) {
 
 	em_log_begin(EM_LOG_LEVEL_ERROR);
+	printf("pos=%p pos->path=%p pos->text=%p\n", pos, pos->path, pos->text);
 	if (pos) em_log_printf(" (File '%s', Line %ld, Column %ld):\n  ", pos->path, pos->line, pos->column);
 	else em_log_printf(": ");
 
@@ -168,6 +169,7 @@ EM_API void em_log_clear(void) {
 
 	err = EM_FALSE;
 	printerr = EM_FALSE;
+	errbufp = errbuf;
 	return;
 }
 
@@ -208,7 +210,7 @@ EM_API void em_log_vprintf(const char *fmt, va_list args) {
 
 	if (!printerr) vfprintf(logfile, fmt, args);
 	else {
-		
+
 		int nbytes = vsnprintf(errbufp, ERRBUFSZ - (size_t)(errbufp - errbuf), fmt, args);
 		if (nbytes >= 0) errbufp += nbytes;
 	}

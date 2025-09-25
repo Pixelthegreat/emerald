@@ -1,4 +1,4 @@
-#!/bin/emerald --
+#!/usr/bin/env emerald
 #
 # Author: Elliot Kohlmyer
 # Date: September 20th, 2025

@@ -11,6 +11,8 @@
 #include <emerald/none.h>
 #include <emerald/main.h>
 
+EM_API em_bool_t em_print_allocation_traffic;
+
 em_reflist_t em_reflist_token = EM_REFLIST_INIT;
 em_reflist_t em_reflist_node = EM_REFLIST_INIT;
 em_reflist_t em_reflist_object = EM_REFLIST_INIT;
@@ -22,6 +24,8 @@ static em_init_flag_t init_flags;
 EM_API em_result_t em_init(em_init_flag_t flags) {
 
 	init_flags = flags;
+	if (flags & EM_INIT_FLAG_PRINT_ALLOC_TRAFFIC)
+		em_print_allocation_traffic = EM_TRUE;
 
 	if (em_reflist_init(&em_reflist_token) != EM_RESULT_SUCCESS)
 		return EM_RESULT_FAILURE;

@@ -9,10 +9,11 @@
 #include <emerald/core.h>
 #include <emerald/object.h>
 #include <emerald/context.h>
+#include <emerald/map.h>
 
 /* module */
 typedef struct em_module {
-	em_result_t (*initialize)(em_context_t *); /* initialize module */
+	em_result_t (*initialize)(em_context_t *, em_value_t); /* initialize module */
 } em_module_t;
 
 /* functions */

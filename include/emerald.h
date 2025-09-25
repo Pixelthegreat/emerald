@@ -32,5 +32,6 @@
 #include <emerald/util.h>
 #include <emerald/module.h>
 #include <emerald/module/site.h>
+#include <emerald/module/os.h>
 
 #endif /* EMERALD_H */

@@ -100,6 +100,18 @@ EM_API em_result_t em_context_init(em_context_t *context) {
 }
 
 /* run code */
+static void remove_text(em_node_t *node) {
+
+	node->pos.text = NULL;
+
+	em_node_t *cur = node->first;
+	while (cur) {
+
+		remove_text(cur);
+		cur = cur->next;
+	}
+}
+
 EM_API em_value_t em_context_run_text(em_context_t *context, const char *path, const char *text, em_ssize_t len) {
 
 	if (!context || !context->init) return EM_VALUE_FAIL;
@@ -112,7 +124,10 @@ EM_API em_value_t em_context_run_text(em_context_t *context, const char *path, c
 	if (em_parser_parse(&context->parser) != EM_RESULT_SUCCESS)
 		return EM_VALUE_FAIL;
 
-	return em_context_visit(context, context->parser.node);
+	em_value_t result = em_context_visit(context, context->parser.node);
+
+	remove_text(context->parser.node);
+	return result;
 }
 
 /* push directory to stack */
@@ -299,13 +314,9 @@ EM_API em_value_t em_context_run_file(em_context_t *context, em_pos_t *pos, cons
 	}
 
 	/* add file to run list */
-	if (EM_VALUE_OK(res)) {
-
-		if (!context->rec_first) context->rec_first = recfile;
-		if (context->rec_last) context->rec_last->next = recfile;
-		context->rec_last = recfile;
-	}
-	else em_free(recfile);
+	if (!context->rec_first) context->rec_first = recfile;
+	if (context->rec_last) context->rec_last->next = recfile;
+	context->rec_last = recfile;
 	
 	return res;
 }
@@ -364,7 +375,7 @@ EM_API em_value_t em_context_visit_float(em_context_t *context, em_node_t *node)
 EM_API em_value_t em_context_visit_string(em_context_t *context, em_node_t *node) {
 
 	em_token_t *token = em_node_get_token(node, 0);
-	return em_string_new_from_utf8(token->value, strlen(token->value));
+	return em_string_new_from_utf8(token->value, em_utf8_strlen(token->value));
 }
 
 /* visit identifier */

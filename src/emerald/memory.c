@@ -18,6 +18,8 @@ em_bool_t em_track_allocations = EM_TRUE;
 em_bool_t em_track_allocations = EM_FALSE;
 #endif
 
+em_bool_t em_print_allocation_traffic = EM_FALSE;
+
 static size_t nalloc; /* current number of allocations */
 static size_t ntotal; /* total number of allocations */
 
@@ -87,6 +89,8 @@ static void *track_alloc(size_t size, const char *file, em_ssize_t line) {
 	if (list->last) list->last->next = blk;
 	list->last = blk;
 
+	if (em_print_allocation_traffic)
+		em_log_info("malloc(%zu) = %p :%s:%ld", size, (void *)(blk + 1), list->path, blk->line);
 	return (void *)blk + sizeof(struct mblk);
 }
 
@@ -94,6 +98,7 @@ static void *track_alloc(size_t size, const char *file, em_ssize_t line) {
 static void *track_realloc(void *p, size_t size) {
 
 	if (!p) return NULL;
+	void *oldp = p;
 
 	struct mblk *blk = (struct mblk *)(p - sizeof(struct mblk));
 	struct mblk *oblk = blk;
@@ -109,6 +114,8 @@ static void *track_realloc(void *p, size_t size) {
 	if (blk->list->first == oblk) blk->list->first = blk;
 	if (blk->list->last == oblk) blk->list->last = blk;
 
+	if (em_print_allocation_traffic)
+		em_log_info("realloc(%p, %zu) = %p :%s:%ld", oldp, size, p, blk->list->path, blk->line);
 	return (void *)p + sizeof(struct mblk);
 }
 
@@ -124,7 +131,12 @@ static void track_free(void *p) {
 	if (blk->list->first == blk) blk->list->first = blk->next;
 	if (blk->list->last == blk) blk->list->last = blk->prev;
 
+	struct mlist *list = blk->list;
+	em_ssize_t line = blk->line;
 	free(blk);
+
+	if (em_print_allocation_traffic)
+		em_log_info("free(%p) :%s:%ld", p, list->path, line);
 }
 
 /* allocate memory */

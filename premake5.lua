@@ -1,9 +1,17 @@
 workspace 'emerald'
 	configurations {'debug', 'release'}
 
--- global configuration --
+-- Options --
+newoption {
+	trigger = 'enable-asan',
+	description = 'Enable address sanitization',
+}
+
+-- Global configuration --
 em_modules = {
 	'site',
+	'os',
+	'string',
 }
 
 language 'C'
@@ -20,7 +28,10 @@ filter 'configurations:release'
 	optimize 'on'
 	defines {'NDEBUG'}
 
--- core emerald interpreter --
+filter 'options:enable-asan'
+	sanitize {'Address'}
+
+-- Core emerald interpreter --
 project 'emerald'
 	files {'src/emerald/**.c', 'include/emerald/**.h', 'include/emerald.h'}
 	includedirs {'obj'}
@@ -29,7 +40,7 @@ project 'emerald'
 	
 	defines {'EM_LIB'}
 
-	-- construct module list --
+	-- Construct module list --
 	local em_module_table = 'static em_module_t *modules[] = {\n'
 	local em_module_proto = '/* Auto-generated header */\n'
 
@@ -42,13 +53,13 @@ project 'emerald'
 
 	io.writefile('obj/modules.h', string.format('%s\n%s', em_module_proto, em_module_table))
 
-	-- configuration filters --
+	-- Configuration filters --
 	filter 'configurations:debug'
 		kind 'SharedLib'
 	filter 'configurations:release'
 		kind 'StaticLib'
 
--- emerald shell --
+-- Emerald shell --
 project 'shell'
 	kind 'ConsoleApp'
 	files {'src/shell/**.c', 'include/shell/**.h'}

@@ -15,6 +15,9 @@
  *   - W: wide string data pointer
  *   - l: list
  *   - m: map
+ * The '*' character works like a regex zero or more
+ * repeat, and should if necessary follow the last
+ * token.
  */
 #ifndef EMERALD_UTIL_H
 #define EMERALD_UTIL_H
@@ -23,12 +26,14 @@
 #include <emerald/core.h>
 #include <emerald/value.h>
 #include <emerald/context.h>
+#include <emerald/map.h>
 #include <emerald/function.h>
 
 /* functions */
-EM_API void em_util_set_value(em_context_t *context, const char *name, em_value_t value); /* set value with utf8 name */
-EM_API void em_util_set_function(em_context_t *context, const char *name, em_builtin_function_handler_t function); /* builtin function shorthand */
-EM_API em_result_t em_util_parse_vargs(em_context_t *context, em_pos_t *pos, em_value_t *args, size_t nargs, const char *format, va_list vargs); /* parse arguments with variadic list */
-EM_API em_result_t em_util_parse_args(em_context_t *context, em_pos_t *pos, em_value_t *args, size_t nargs, const char *format, ...); /* parse arguments */
+EM_API void em_util_set_value(em_value_t map, const char *name, em_value_t value); /* set value with utf8 name */
+EM_API void em_util_set_string(em_value_t map, const char *name, const char *value); /* set value with utf8 name to utf8 string */
+EM_API void em_util_set_function(em_value_t map, const char *name, em_builtin_function_handler_t function); /* builtin function shorthand */
+EM_API em_result_t em_util_parse_vargs(em_pos_t *pos, em_value_t *args, size_t nargs, const char *format, va_list vargs); /* parse arguments with variadic list */
+EM_API em_result_t em_util_parse_args(em_pos_t *pos, em_value_t *args, size_t nargs, const char *format, ...); /* parse arguments */
 
 #endif /* EMERALD_UTIL_H */

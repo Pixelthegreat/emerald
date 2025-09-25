@@ -5,11 +5,12 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <emerald/core.h>
+#include <emerald/utf8.h>
 #include <emerald/hash.h>
 #include <emerald/string.h>
 #include <emerald/list.h>
-#include <emerald/map.h>
 #include <emerald/util.h>
 
 #define INVALID_ARGUMENTS ({\
@@ -18,31 +19,44 @@
 	})
 
 /* set value with utf8 name */
-EM_API void em_util_set_value(em_context_t *context, const char *name, em_value_t value) {
+EM_API void em_util_set_value(em_value_t map, const char *name, em_value_t value) {
 
-	em_context_set_value(context, em_utf8_strhash(name), value);
+	em_map_set(map, em_utf8_strhash(name), value);
+}
+
+/* set value with utf8 name to utf8 string */
+EM_API void em_util_set_string(em_value_t map, const char *name, const char *value) {
+
+	em_util_set_value(map, name, em_string_new_from_utf8(value, em_utf8_strlen(value)));
 }
 
 /* builtin function shorthand */
-EM_API void em_util_set_function(em_context_t *context, const char *name, em_builtin_function_handler_t function) {
+EM_API void em_util_set_function(em_value_t map, const char *name, em_builtin_function_handler_t function) {
 
-	em_context_set_value(context, em_utf8_strhash(name), em_builtin_function_new(name, function));
+	em_map_set(map, em_utf8_strhash(name), em_builtin_function_new(name, function));
 }
 
 /* parse arguments with variadic list */
-EM_API em_result_t em_util_parse_vargs(em_context_t *context, em_pos_t *pos, em_value_t *args, size_t nargs, const char *format, va_list vargs) {
+EM_API em_result_t em_util_parse_vargs(em_pos_t *pos, em_value_t *args, size_t nargs, const char *format, va_list vargs) {
 
 	size_t i = 0;
+	char c = 0;
+	char rc = 0; /* repeat character */
 	while (*format && i < nargs) {
 
-		char c = *format++;
+		if (rc || *format == '*')
+			rc = c;
+		else c = *format++;
+
 		em_value_t arg = args[i++];
 		switch (c) {
 
 			/* any value */
 			case 'v':
+				if (rc) break;
+
 				em_value_t *pvalue = va_arg(vargs, em_value_t *);
-				*pvalue = arg;
+				if (pvalue) *pvalue = arg;
 				break;
 
 			/* number */
@@ -50,72 +64,80 @@ EM_API em_result_t em_util_parse_vargs(em_context_t *context, em_pos_t *pos, em_
 				if (arg.type != EM_VALUE_TYPE_INT &&
 				    arg.type != EM_VALUE_TYPE_FLOAT)
 					INVALID_ARGUMENTS;
+				if (rc) break;
 
 				em_value_t *pnumber = va_arg(vargs, em_value_t *);
-				*pnumber = arg;
+				if (pnumber) *pnumber = arg;
 				break;
 
 			/* integer */
 			case 'i':
 				if (arg.type != EM_VALUE_TYPE_INT)
 					INVALID_ARGUMENTS;
+				if (rc) break;
 
 				em_inttype_t *pinteger = va_arg(vargs, em_inttype_t *);
-				*pinteger = arg.value.te_inttype;
+				if (pinteger) *pinteger = arg.value.te_inttype;
 				break;
 
 			/* floating point */
 			case 'f':
 				if (arg.type != EM_VALUE_TYPE_FLOAT)
 					INVALID_ARGUMENTS;
+				if (rc) break;
 
 				em_floattype_t *pfloat = va_arg(vargs, em_floattype_t *);
-				*pfloat = arg.value.te_floattype;
+				if (pfloat) *pfloat = arg.value.te_floattype;
 				break;
 
 			/* object */
 			case 'o':
 				if (arg.type != EM_VALUE_TYPE_OBJECT)
 					INVALID_ARGUMENTS;
+				if (rc) break;
 
 				em_value_t *pobject = va_arg(vargs, em_value_t *);
-				*pobject = arg;
+				if (pobject) *pobject = arg;
 				break;
 
 			/* wide string object */
 			case 'w':
 				if (!em_is_string(arg))
 					INVALID_ARGUMENTS;
+				if (rc) break;
 
 				em_value_t *pstring = va_arg(vargs, em_value_t *);
-				*pstring = arg;
+				if (pstring) *pstring = arg;
 				break;
 
 			/* wide string data pointer */
 			case 'W':
 				if (!em_is_string(arg))
 					INVALID_ARGUMENTS;
+				if (rc) break;
 
 				const em_wchar_t **pstringdata = va_arg(vargs, const em_wchar_t **);
-				*pstringdata = EM_STRING(EM_OBJECT_FROM_VALUE(arg))->data;
+				if (pstringdata) *pstringdata = EM_STRING(EM_OBJECT_FROM_VALUE(arg))->data;
 				break;
 
 			/* list */
 			case 'l':
 				if (!em_is_list(arg))
 					INVALID_ARGUMENTS;
+				if (rc) break;
 
 				em_value_t *plist = va_arg(vargs, em_value_t *);
-				*plist = arg;
+				if (plist) *plist = arg;
 				break;
 
 			/* map */
 			case 'm':
 				if (!em_is_map(arg))
 					INVALID_ARGUMENTS;
+				if (rc) break;
 
 				em_value_t *pmap = va_arg(vargs, em_value_t *);
-				*pmap = arg;
+				if (pmap) *pmap = arg;
 				break;
 
 			/* error */
@@ -126,7 +148,11 @@ EM_API em_result_t em_util_parse_vargs(em_context_t *context, em_pos_t *pos, em_
 	}
 
 	/* invalid argument count */
-	if (i < nargs || *format) {
+	em_bool_t pass = EM_TRUE;
+	if (*format && (*format == '*' || *(format+1) == '*'))
+		pass = EM_FALSE;
+
+	if ((i < nargs || *format) && pass) {
 
 		if (i < nargs) em_log_runtime_error(pos, "Too many arguments");
 		else em_log_runtime_error(pos, "Too few arguments");
@@ -137,11 +163,11 @@ EM_API em_result_t em_util_parse_vargs(em_context_t *context, em_pos_t *pos, em_
 }
 
 /* parse arguments */
-EM_API em_result_t em_util_parse_args(em_context_t *context, em_pos_t *pos, em_value_t *args, size_t nargs, const char *format, ...) {
+EM_API em_result_t em_util_parse_args(em_pos_t *pos, em_value_t *args, size_t nargs, const char *format, ...) {
 
 	va_list vargs;
 	va_start(vargs, format);
-	em_result_t result = em_util_parse_vargs(context, pos, args, nargs, format, vargs);
+	em_result_t result = em_util_parse_vargs(pos, args, nargs, format, vargs);
 	va_end(vargs);
 
 	return result;
