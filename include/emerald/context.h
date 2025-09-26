@@ -22,6 +22,7 @@ typedef struct em_recfile {
 
 typedef struct em_context {
 	em_bool_t init; /* initialized */
+	const char **argv; /* cli arguments */
 	em_lexer_t lexer; /* local lexer */
 	em_parser_t parser; /* local parser */
 	const char *dirstack[EM_CONTEXT_MAX_DIRS]; /* directory stack */
@@ -36,8 +37,8 @@ typedef struct em_context {
 #define EM_CONTEXT_INIT ((em_context_t){EM_FALSE})
 
 /* functions */
-EM_API em_context_t *em_context_new(void); /* create context */
-EM_API em_result_t em_context_init(em_context_t *context); /* initialize context */
+EM_API em_context_t *em_context_new(const char **argv); /* create context */
+EM_API em_result_t em_context_init(em_context_t *context, const char **argv); /* initialize context */
 EM_API em_value_t em_context_run_text(em_context_t *context, const char *path, const char *text, em_ssize_t len); /* run code */
 EM_API const char *em_context_pushdir(em_context_t *context, const char *path); /* push directory to stack */
 EM_API const char *em_context_resolve(em_context_t *context, const char *path); /* resolve file path */

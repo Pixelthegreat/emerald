@@ -427,13 +427,26 @@ EM_API void em_value_decref(em_value_t v) {
 /* delete if reference count is zero */
 EM_API void em_value_delete(em_value_t v) {
 
-	if (!EM_VALUE_OK(v)) return;
-
 	if (v.type == EM_VALUE_TYPE_OBJECT) {
 
 		EM_OBJECT_INCREF(v.value.t_voidp);
 		EM_OBJECT_DECREF(v.value.t_voidp);
 	}
+}
+
+/* decrease reference count without freeing */
+EM_API void em_value_decref_no_free(em_value_t v) {
+
+	if (v.type == EM_VALUE_TYPE_OBJECT)
+		EM_OBJECT_DECREF_NO_FREE(v.value.t_voidp);
+}
+
+/* compare exact equality */
+EM_API em_bool_t em_value_is(em_value_t a, em_value_t b) {
+
+	if (a.type == EM_VALUE_TYPE_OBJECT && b.type == EM_VALUE_TYPE_OBJECT)
+		return a.value.t_voidp == b.value.t_voidp;
+	return EM_FALSE;
 }
 
 /* get truthiness of value */

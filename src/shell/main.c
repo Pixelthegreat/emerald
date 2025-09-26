@@ -12,5 +12,5 @@ int main(int argc, const char **argv) {
 
 	em_result_t res = shell_application_run(argc, argv);
 	shell_application_destroy();
-	return res == EM_RESULT_SUCCESS? EXIT_SUCCESS: EXIT_FAILURE;
+	return res == EM_RESULT_FAILURE? 1: EM_RESULT_TO_CODE(res);
 }

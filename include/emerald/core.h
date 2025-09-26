@@ -38,9 +38,13 @@
 typedef enum em_result {
 	EM_RESULT_SUCCESS = 0,
 	EM_RESULT_FAILURE,
+	EM_RESULT_ERROR_CODE,
 
 	EM_RESULT_COUNT,
 } em_result_t;
+
+#define EM_RESULT_FROM_CODE(c) (((em_result_t)(c) << 8) | EM_RESULT_ERROR_CODE)
+#define EM_RESULT_TO_CODE(r) ((int)((r) >> 8) & 0xff)
 
 /* helper macros */
 #define EM_MIN(a, b) ((a) < (b)? (a): (b))

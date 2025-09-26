@@ -1,7 +1,7 @@
 #!/usr/bin/env emerald
 #
 # Author: Elliot Kohlmyer
-# Date: September 20th, 2025
+# Date: September 25th, 2025
 # Purpose: Test string formatting capabilities
 #
 include 'em/string.em'

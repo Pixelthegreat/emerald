@@ -536,7 +536,7 @@ EM_API void em_lexer_destroy(em_lexer_t *lexer) {
 		cur->next = NULL;
 		em_refobj_decref(EM_REFOBJ(cur));
 
-		cur = cur->next;
+		cur = next;
 	}
 
 	lexer->init = EM_FALSE;

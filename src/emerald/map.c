@@ -116,6 +116,9 @@ EM_API void em_map_set(em_value_t object, em_hash_t key, em_value_t value) {
 		map->last = entry;
 	}
 
+	if (em_value_is(entry->value, value))
+		return;
+
 	if (EM_VALUE_OK(entry->value)) em_value_decref(entry->value);
 	entry->value = value;
 	em_value_incref(value);

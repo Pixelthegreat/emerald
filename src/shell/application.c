@@ -17,6 +17,8 @@ static em_context_t context;
 static char pathbuf[PATHBUFSZ];
 static em_wchar_t wpathbuf[PATHBUFSZ];
 
+static em_result_t result = EM_RESULT_SUCCESS;
+
 /* arguments */
 enum {
 	OPT_HELP = 0,
@@ -40,6 +42,7 @@ enum {
 };
 static int opt_flags = 0;
 static const char *arg_filename = NULL;
+static int arg_index = -1;
 
 /* parse arguments */
 static em_result_t parse_args(int argc, const char **argv) {
@@ -88,11 +91,11 @@ static em_result_t parse_args(int argc, const char **argv) {
 		}
 
 		/* normal argument */
-		else if (!arg_filename) arg_filename = arg;
-		else {
-
-			em_log_fatal("Unexpected excess argument '%s'", arg);
-			return EM_RESULT_FAILURE;
+		else if (!arg_filename) {
+			
+			arg_filename = arg;
+			arg_index = i;
+			break;
 		}
 	}
 	return EM_RESULT_SUCCESS;
@@ -129,9 +132,17 @@ static void repl(void) {
 
 		/* run line */
 		em_value_t res = em_context_run_text(&context, "<stdin>", shbuf, len);
-		if (em_log_catch("SystemExit"))
+
+		if (em_log_catch("SystemExit")) {
+
+			result = EM_RESULT_FROM_CODE(context.pass.value.te_inttype);
 			running = EM_FALSE;
-		else if (em_log_catch(NULL)) em_log_flush();
+		}
+		else if (em_log_catch(NULL)) {
+
+			result = EM_RESULT_FAILURE;
+			em_log_flush();
+		}
 
 		if (EM_VALUE_OK(res)) em_value_log(res);
 		em_value_delete(res);
@@ -169,7 +180,7 @@ EM_API em_result_t shell_application_run(int argc, const char **argv) {
 	if (em_init(init_flags) != EM_RESULT_SUCCESS)
 		return EM_RESULT_FAILURE;
 
-	if (em_context_init(&context) != EM_RESULT_SUCCESS)
+	if (em_context_init(&context, arg_index >= 0? argv + arg_index: NULL) != EM_RESULT_SUCCESS)
 		return EM_RESULT_FAILURE;
 	if (em_module_init_all(&context) != EM_RESULT_SUCCESS)
 		return EM_RESULT_FAILURE;
@@ -178,14 +189,21 @@ EM_API em_result_t shell_application_run(int argc, const char **argv) {
 	if (!arg_filename) repl();
 	else {
 		em_value_t res = em_context_run_file(&context, NULL, arg_filename);
-		if (em_log_catch("SystemExit"));
-		else if (em_log_catch(NULL)) em_log_flush();
+
+		if (em_log_catch("SystemExit"))
+			result = EM_RESULT_FROM_CODE(context.pass.value.te_inttype);
+
+		else if (em_log_catch(NULL)) {
+
+			result = EM_RESULT_FAILURE;
+			em_log_flush();
+		}
 
 		if (EM_VALUE_OK(res)) em_value_log(res);
 		em_value_delete(res);
 	}
 
-	return EM_RESULT_SUCCESS;
+	return result;
 }
 
 /* clean up resources */

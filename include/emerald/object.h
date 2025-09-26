@@ -49,6 +49,7 @@ EM_API em_reflist_t em_reflist_object;
 
 #define EM_OBJECT_INCREF(p) EM_OBJECT(em_refobj_incref(EM_REFOBJ(p)))
 #define EM_OBJECT_DECREF(p) em_refobj_decref(EM_REFOBJ(p))
+#define EM_OBJECT_DECREF_NO_FREE(p) em_refobj_decref_no_free(EM_REFOBJ(p))
 
 #define EM_OBJECT_AS_VALUE(p) ((em_value_t){.type = EM_VALUE_TYPE_OBJECT, .value.t_voidp = (void *)(p)})
 #define EM_OBJECT_FROM_VALUE(v) EM_OBJECT((v).value.t_voidp)

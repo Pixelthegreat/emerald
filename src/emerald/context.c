@@ -52,12 +52,12 @@ static char pathbuf1[PATHBUFSZ];
 static char pathbuf2[PATHBUFSZ];
 
 /* create context */
-EM_API em_context_t *em_context_new(void) {
+EM_API em_context_t *em_context_new(const char **argv) {
 
 	em_context_t *context = em_malloc(sizeof(em_context_t));
 	if (!context) return NULL;
 
-	if (em_context_init(context) != EM_RESULT_SUCCESS) {
+	if (em_context_init(context, argv) != EM_RESULT_SUCCESS) {
 
 		em_context_free(context);
 		return NULL;
@@ -67,7 +67,7 @@ EM_API em_context_t *em_context_new(void) {
 }
 
 /* initialize context */
-EM_API em_result_t em_context_init(em_context_t *context) {
+EM_API em_result_t em_context_init(em_context_t *context, const char **argv) {
 
 	if (!context) return EM_RESULT_FAILURE;
 	else if (context->init) {
@@ -76,6 +76,7 @@ EM_API em_result_t em_context_init(em_context_t *context) {
 		return EM_RESULT_FAILURE;
 	}
 
+	context->argv = argv;
 	context->lexer = EM_LEXER_INIT;
 	context->parser = EM_PARSER_INIT;
 
@@ -100,15 +101,20 @@ EM_API em_result_t em_context_init(em_context_t *context) {
 }
 
 /* run code */
-static void remove_text(em_node_t *node) {
+static void remove_text(const char *text) {
 
-	node->pos.text = NULL;
+	em_node_t *node = EM_NODE(em_reflist_node.normal.first);
+	while (node) {
 
-	em_node_t *cur = node->first;
-	while (cur) {
+		if (node->pos.text == text) node->pos.text = NULL;
+		node = EM_NODE(EM_REFOBJ(node)->next);
+	}
 
-		remove_text(cur);
-		cur = cur->next;
+	em_token_t *token = EM_TOKEN(em_reflist_token.normal.first);
+	while (token) {
+
+		if (token->pos.text == text) token->pos.text = NULL;
+		token = EM_TOKEN(EM_REFOBJ(token)->next);
 	}
 }
 
@@ -126,7 +132,7 @@ EM_API em_value_t em_context_run_text(em_context_t *context, const char *path, c
 
 	em_value_t result = em_context_visit(context, context->parser.node);
 
-	remove_text(context->parser.node);
+	remove_text(text);
 	return result;
 }
 
@@ -618,7 +624,7 @@ EM_API em_value_t em_context_visit_call(em_context_t *context, em_node_t *node) 
 		if (!EM_VALUE_OK(args[nargs])) {
 
 			for (size_t i = 0; i < nargs; i++)
-				em_value_delete(args[i]);
+				em_value_decref(args[i]);
 			em_value_delete(call);
 			return EM_VALUE_FAIL;
 		}
@@ -629,8 +635,12 @@ EM_API em_value_t em_context_visit_call(em_context_t *context, em_node_t *node) 
 
 	em_value_t result = em_value_call(context, call, args, nargs, &node->pos);
 
-	for (size_t i = 0; i < nargs; i++)
-		em_value_decref(args[i]);
+	for (size_t i = 0; i < nargs; i++) {
+
+		if (em_value_is(result, args[i]))
+			em_value_decref_no_free(args[i]);
+		else em_value_decref(args[i]);
+	}
 	em_value_delete(call);
 	return result;
 }
@@ -782,16 +792,16 @@ EM_API em_value_t em_context_visit_if(em_context_t *context, em_node_t *node) {
 	em_value_t condition = em_context_visit(context, condition_node);
 	if (!EM_VALUE_OK(condition)) return EM_VALUE_FAIL;
 
-	if (em_value_is_true(condition, &condition_node->pos).value.te_inttype) {
+	em_inttype_t truthiness = em_value_is_true(condition, &condition_node->pos).value.te_inttype;
+	em_value_delete(condition);
+
+	if (truthiness) {
 
 		result = em_context_visit(context, body_node);
-		if (!EM_VALUE_OK(result)) {
+		if (!EM_VALUE_OK(result)) return EM_VALUE_FAIL;
 
-			em_value_delete(condition);
-			return EM_VALUE_FAIL;
-		}
+		return result;
 	}
-	em_value_delete(condition);
 
 	/* evaluate elif and else statements */
 	condition_node = body_node->next;
@@ -828,6 +838,8 @@ EM_API em_value_t em_context_visit_if(em_context_t *context, em_node_t *node) {
 			result = em_context_visit(context, body_node);
 			if (!EM_VALUE_OK(result))
 				return EM_VALUE_FAIL;
+
+			break;
 		}
 
 		condition_node = body_node->next;
@@ -864,9 +876,11 @@ EM_API em_value_t em_context_visit_for(em_context_t *context, em_node_t *node) {
 
 	/* evaluate body */
 	em_value_t result = em_none;
+	em_hash_t hash = em_utf8_strhash(name_token->value);
+
 	for (em_inttype_t i = start.value.te_inttype; i < end.value.te_inttype; i++) {
 
-		em_context_set_value(context, em_utf8_strhash(name_token->value), EM_VALUE_INT(i));
+		em_context_set_value(context, hash, EM_VALUE_INT(i));
 		em_value_delete(result);
 
 		result = em_context_visit(context, body_node);
@@ -887,6 +901,16 @@ EM_API em_value_t em_context_visit_for(em_context_t *context, em_node_t *node) {
 			}
 			else return EM_VALUE_FAIL;
 		}
+
+		/* update i */
+		em_value_t value = em_context_get_value(context, hash);
+		if (value.type != EM_VALUE_TYPE_INT) {
+
+			em_log_runtime_error(&node->pos, "Expected integer for iterator");
+			em_value_delete(result);
+			return EM_VALUE_FAIL;
+		}
+		i = value.value.te_inttype;
 	}
 	return result;
 }
@@ -960,10 +984,12 @@ EM_API em_value_t em_context_visit_while(em_context_t *context, em_node_t *node)
 	em_value_t condition = em_context_visit(context, condition_node);
 	if (!EM_VALUE_OK(condition)) return EM_VALUE_FAIL;
 
-	em_value_t result = em_none;
-	while (em_value_is_true(condition, &node->pos).value.te_inttype) {
+	em_inttype_t truthiness = em_value_is_true(condition, &node->pos).value.te_inttype;
+	em_value_delete(condition);
 
-		em_value_delete(condition);
+	em_value_t result = em_none;
+	while (truthiness) {
+
 		em_value_delete(result);
 
 		result = em_context_visit(context, body_node);
@@ -991,8 +1017,10 @@ EM_API em_value_t em_context_visit_while(em_context_t *context, em_node_t *node)
 			em_value_delete(result);
 			return EM_VALUE_FAIL;
 		}
+
+		truthiness = em_value_is_true(condition, &node->pos).value.te_inttype;
+		em_value_delete(condition);
 	}
-	em_value_delete(condition);
 	return result;
 }
 

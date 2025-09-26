@@ -6,10 +6,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <emerald/core.h>
+#include <emerald/utf8.h>
 #include <emerald/value.h>
 #include <emerald/none.h>
 #include <emerald/util.h>
 #include <emerald/list.h>
+#include <emerald/string.h>
 #include <emerald/module/site.h>
 
 /* site module */
@@ -56,6 +58,10 @@ static em_value_t site_append(em_context_t *context, em_value_t *args, size_t na
 /* exit interpreter */
 static em_value_t site_exit(em_context_t *context, em_value_t *args, size_t nargs, em_pos_t *pos) {
 
+	context->pass = EM_VALUE_INT(0);
+	if (nargs && em_util_parse_args(pos, args, nargs, "i", &context->pass.value.te_inttype) != EM_RESULT_SUCCESS)
+		return EM_VALUE_FAIL;
+
 	em_log_raise("SystemExit", pos, "Exited");
 	return EM_VALUE_FAIL;
 }
@@ -73,6 +79,23 @@ static em_result_t initialize(em_context_t *context, em_value_t map) {
 	em_util_set_value(map, "true", EM_VALUE_TRUE);
 	em_util_set_value(map, "false", EM_VALUE_FALSE);
 	em_util_set_value(map, "none", em_none);
+
+	/* create argument list */
+	em_value_t argv;
+	if (context->argv) {
+
+		size_t nargs = 0;
+		while (context->argv[nargs]) nargs++;
+
+		argv = em_list_new(nargs);
+		for (size_t i = 0; i < nargs; i++) {
+
+			em_value_t string = em_string_new_from_utf8(context->argv[i], em_utf8_strlen(context->argv[i]));
+			em_list_append(argv, string);
+		}
+	}
+	else argv = em_list_new(0);
+	em_util_set_value(map, "argv", argv);
 
 	return EM_RESULT_SUCCESS;
 }

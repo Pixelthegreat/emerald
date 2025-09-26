@@ -22,6 +22,8 @@ static em_value_t add(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t multiply(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t compare_equal(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_hash_t hash(em_value_t v, em_pos_t *pos);
+static em_value_t get_by_index(em_value_t v, em_value_t i, em_pos_t *pos);
+static em_value_t length_of(em_value_t v, em_pos_t *pos);
 static em_value_t to_string(em_value_t v, em_pos_t *pos);
 
 static em_object_type_t type = {
@@ -30,6 +32,8 @@ static em_object_type_t type = {
 	.multiply = multiply,
 	.compare_equal = compare_equal,
 	.hash = hash,
+	.get_by_index = get_by_index,
+	.length_of = length_of,
 	.to_string = to_string,
 };
 
@@ -106,6 +110,32 @@ static em_hash_t hash(em_value_t v, em_pos_t *pos) {
 
 	em_string_t *string = EM_STRING(EM_OBJECT_FROM_VALUE(v));
 	return string->hash;
+}
+
+/* get value by index */
+static em_value_t get_by_index(em_value_t v, em_value_t i, em_pos_t *pos) {
+
+	if (i.type != EM_VALUE_TYPE_INT)
+		return EM_VALUE_FAIL;
+
+	em_inttype_t index = i.value.te_inttype;
+
+	em_string_t *string = EM_STRING(EM_OBJECT_FROM_VALUE(v));
+
+	em_inttype_t length = (em_inttype_t)string->length;
+	if (index < 0) index = length - index;
+
+	if (index < 0 || index >= length)
+		return EM_VALUE_FAIL;
+
+	return em_string_new_from_wchar(string->data + index, 1);
+}
+
+/* get length of string */
+static em_value_t length_of(em_value_t v, em_pos_t *pos) {
+
+	em_string_t *string = EM_STRING(EM_OBJECT_FROM_VALUE(v));
+	return EM_VALUE_INT((em_inttype_t)string->length);
 }
 
 /* get string representation */

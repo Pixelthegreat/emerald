@@ -122,7 +122,7 @@ EM_API void em_reflist_cleanup(em_reflist_t *list) {
 /* lock list to prevent any immediate item destruction */
 EM_API void em_reflist_lock(em_reflist_t *list) {
 
-	if (!list || !list->init) return;
+	if (!list || !list->init || list->nlock <= 0) return;
 
 	list->nlock++;
 }
@@ -210,7 +210,7 @@ EM_API em_refobj_t *em_refobj_incref(em_refobj_t *obj) {
 /* decrease reference count */
 EM_API void em_refobj_decref(em_refobj_t *obj) {
 
-	if (!obj || !obj->refcnt) return;
+	if (!obj || !obj->refcnt || obj->list->nlock <= 0) return;
 
 	if (!--obj->refcnt) {
 
@@ -218,6 +218,14 @@ EM_API void em_refobj_decref(em_refobj_t *obj) {
 			em_reflist_move(obj->list, obj);
 		else em_reflist_remove(obj->list, obj);
 	}
+}
+
+/* decrease reference count without freeing */
+EM_API void em_refobj_decref_no_free(em_refobj_t *obj) {
+
+	if (!obj || !obj->refcnt || obj->list->nlock <= 0) return;
+
+	obj->refcnt--;
 }
 
 /* free reference object */

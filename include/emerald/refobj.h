@@ -58,6 +58,7 @@ EM_API void em_reflist_destroy(em_reflist_t *list); /* destroy list */
 EM_API em_refobj_t *em_refobj_new_full(em_reflist_t *list, size_t size, em_cleanup_mode_t mode, const char *file, em_ssize_t line); /* create reference object */
 EM_API em_refobj_t *em_refobj_incref(em_refobj_t *obj); /* increase reference count */
 EM_API void em_refobj_decref(em_refobj_t *obj); /* decrease reference count */
+EM_API void em_refobj_decref_no_free(em_refobj_t *obj); /* decrease reference count without freeing */
 EM_API void em_refobj_free(em_refobj_t *obj); /* free reference object */
 EM_API void em_refobj_free_bare(em_refobj_t *obj); /* free without calling handler */
 
