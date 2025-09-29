@@ -68,5 +68,6 @@ EM_API em_value_t em_value_call(struct em_context *context, em_value_t v, em_val
 EM_API em_value_t em_value_length_of(em_value_t v, em_pos_t *pos); /* get value length */
 EM_API em_value_t em_value_to_string(em_value_t v, em_pos_t *pos); /* get string representation of value */
 EM_API void em_value_log(em_value_t v); /* log value */
+EM_API void em_value_print(em_value_t v, em_pos_t *pos); /* print value */
 
 #endif /* EMERALD_VALUE_H */

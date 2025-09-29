@@ -12,7 +12,7 @@
 #include <emerald/log.h>
 
 #ifdef DEBUG
-em_log_level_t em_log_hide_level = EM_LOG_LEVEL_INFO;
+em_log_level_t em_log_hide_level = EM_LOG_LEVEL_WARNING;
 #else
 em_log_level_t em_log_hide_level = EM_LOG_LEVEL_ERROR;
 #endif
@@ -131,7 +131,7 @@ EM_API void em_log_raise(const char *name, const em_pos_t *pos, const char *fmt,
 
 	if (err) {
 
-		em_log_warning("Error already raised");
+		em_log_warning("Error already raised (conflicting: '%s')", fmt);
 		return;
 	}
 	strncpy(errname, name, ERRNAMESZ);

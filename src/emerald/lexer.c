@@ -52,6 +52,7 @@ EM_API em_result_t em_lexer_init(em_lexer_t *lexer) {
 
 	/* initialize */
 	lexer->pos = EM_POS_INIT;
+	lexer->initial_pos = EM_POS_INIT;
 	lexer->first = NULL;
 	lexer->last = NULL;
 
@@ -82,7 +83,9 @@ EM_API void em_lexer_reset(em_lexer_t *lexer, const char *path, const char *text
 	lexer->pos.path = path;
 	lexer->pos.text = text;
 	lexer->pos.len = len;
+
 	em_pos_advance(&lexer->pos);
+	memcpy(&lexer->initial_pos, &lexer->pos, sizeof(em_pos_t));
 }
 
 /* add token with length specified */

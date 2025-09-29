@@ -144,7 +144,7 @@ static void repl(void) {
 			em_log_flush();
 		}
 
-		if (EM_VALUE_OK(res)) em_value_log(res);
+		if (EM_VALUE_OK(res)) em_value_print(res, NULL);
 		em_value_delete(res);
 	}
 }
@@ -198,8 +198,6 @@ EM_API em_result_t shell_application_run(int argc, const char **argv) {
 			result = EM_RESULT_FAILURE;
 			em_log_flush();
 		}
-
-		if (EM_VALUE_OK(res)) em_value_log(res);
 		em_value_delete(res);
 	}
 

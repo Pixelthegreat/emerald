@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <emerald/core.h>
 #include <emerald/utf8.h>
+#include <emerald/wchar.h>
 #include <emerald/value.h>
 #include <emerald/none.h>
 #include <emerald/util.h>
@@ -66,6 +67,49 @@ static em_value_t site_exit(em_context_t *context, em_value_t *args, size_t narg
 	return EM_VALUE_FAIL;
 }
 
+/* print without newline */
+static em_value_t site_print(em_context_t *context, em_value_t *args, size_t nargs, em_pos_t *pos) {
+
+	em_value_t value;
+
+	if (em_util_parse_args(pos, args, nargs, "v", &value) != EM_RESULT_SUCCESS)
+		return EM_VALUE_FAIL;
+
+	em_value_t string = em_value_to_string(value, pos);
+	if (!EM_VALUE_OK(string))
+		return EM_VALUE_FAIL;
+
+	em_string_t *pstring = EM_STRING(EM_OBJECT_FROM_VALUE(string));
+	em_wchar_write(stdout, pstring->data, pstring->length);
+	fflush(stdout);
+
+	if (!em_value_is(value, string))
+		em_value_delete(string);
+	return em_none;
+}
+
+/* print with newline */
+static em_value_t site_println(em_context_t *context, em_value_t *args, size_t nargs, em_pos_t *pos) {
+
+	em_value_t value;
+
+	if (em_util_parse_args(pos, args, nargs, "v", &value) != EM_RESULT_SUCCESS)
+		return EM_VALUE_FAIL;
+
+	em_value_t string = em_value_to_string(value, pos);
+	if (!EM_VALUE_OK(string))
+		return EM_VALUE_FAIL;
+
+	em_string_t *pstring = EM_STRING(EM_OBJECT_FROM_VALUE(string));
+	em_wchar_write(stdout, pstring->data, pstring->length);
+	fprintf(stdout, "\n");
+	fflush(stdout);
+
+	if (!em_value_is(value, string))
+		em_value_delete(string);
+	return em_none;
+}
+
 /* initialize module */
 static em_result_t initialize(em_context_t *context, em_value_t map) {
 
@@ -74,6 +118,8 @@ static em_result_t initialize(em_context_t *context, em_value_t map) {
 	em_util_set_function(map, "toString", site_toString);
 	em_util_set_function(map, "append", site_append);
 	em_util_set_function(map, "exit", site_exit);
+	em_util_set_function(map, "print", site_print);
+	em_util_set_function(map, "println", site_println);
 
 	/* common variables */
 	em_util_set_value(map, "true", EM_VALUE_TRUE);

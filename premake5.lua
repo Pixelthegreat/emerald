@@ -9,8 +9,9 @@ newoption {
 
 -- Global configuration --
 em_modules = {
-	'site',
+	'array',
 	'os',
+	'site',
 	'string',
 }
 

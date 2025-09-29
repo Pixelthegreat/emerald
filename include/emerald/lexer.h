@@ -13,6 +13,7 @@
 typedef struct em_lexer {
 	em_bool_t init; /* initialized */
 	em_pos_t pos; /* position in file/text */
+	em_pos_t initial_pos; /* initial position */
 	em_token_t *first; /* first token */
 	em_token_t *last; /* last token */
 } em_lexer_t;

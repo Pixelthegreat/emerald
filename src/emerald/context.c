@@ -130,7 +130,12 @@ EM_API em_value_t em_context_run_text(em_context_t *context, const char *path, c
 	if (em_parser_parse(&context->parser) != EM_RESULT_SUCCESS)
 		return EM_VALUE_FAIL;
 
-	em_value_t result = em_context_visit(context, context->parser.node);
+	em_node_t *node = context->parser.node;
+	EM_NODE_INCREF(node);
+
+	em_value_t result = em_context_visit(context, node);
+
+	EM_NODE_DECREF(node);
 
 	remove_text(text);
 	return result;
@@ -309,7 +314,7 @@ EM_API em_value_t em_context_run_file(em_context_t *context, em_pos_t *pos, cons
 	recfile->next = NULL;
 
 	/* run code */
-	em_value_t res = em_context_run_text(context, recfile->rpath, fbuf, (em_ssize_t)len);
+	em_value_t result = em_context_run_text(context, recfile->rpath, fbuf, (em_ssize_t)len);
 
 	/* clean up */
 	em_free(fbuf);
@@ -324,7 +329,7 @@ EM_API em_value_t em_context_run_file(em_context_t *context, em_pos_t *pos, cons
 	if (context->rec_last) context->rec_last->next = recfile;
 	context->rec_last = recfile;
 	
-	return res;
+	return result;
 }
 
 /* visit node */

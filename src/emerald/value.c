@@ -12,6 +12,7 @@
 #include <emerald/wchar.h>
 #include <emerald/object.h>
 #include <emerald/string.h>
+#include <emerald/none.h>
 #include <emerald/value.h>
 
 #define INVALID_OPERATION_RETURN(retv) ({\
@@ -628,5 +629,26 @@ EM_API void em_value_log(em_value_t v) {
 
 	if (v.type != EM_VALUE_TYPE_OBJECT ||
 	    string.value.t_voidp != v.value.t_voidp)
+		em_value_delete(string);
+}
+
+/* print value */
+EM_API void em_value_print(em_value_t v, em_pos_t *pos) {
+
+	if (em_value_is(v, em_none))
+		return;
+
+	em_value_t string = em_value_to_string(v, pos);
+	if (!EM_VALUE_OK(string)) {
+
+		em_log_clear();
+		return;
+	}
+
+	em_string_t *pstring = EM_STRING(EM_OBJECT_FROM_VALUE(string));
+	em_wchar_write(stdout, pstring->data, pstring->length);
+	printf("\n");
+
+	if (!em_value_is(v, string))
 		em_value_delete(string);
 }

@@ -36,7 +36,10 @@ static em_value_t is_true(em_value_t v, em_pos_t *pos) {
 static em_value_t get_by_index(em_value_t v, em_value_t i, em_pos_t *pos) {
 
 	em_list_t *list = EM_LIST(EM_OBJECT_FROM_VALUE(v));
-	if (i.type != EM_VALUE_TYPE_INT)
+
+	if (i.type != EM_VALUE_TYPE_INT ||
+	    i.value.te_inttype < -(em_inttype_t)list->nitems ||
+	    i.value.te_inttype >= (em_inttype_t)list->nitems)
 		return EM_VALUE_FAIL;
 
 	return em_list_get(v, (em_ssize_t)i.value.te_inttype);

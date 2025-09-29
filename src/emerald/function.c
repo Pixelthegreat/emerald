@@ -81,7 +81,7 @@ static em_value_t call(struct em_context *context, em_value_t v, em_value_t *arg
 		em_log_clear();
 		return context->pass;
 	}
-	return em_none;
+	return EM_VALUE_OK(result)? em_none: EM_VALUE_FAIL;
 }
 
 /* get string representation of function */

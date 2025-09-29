@@ -42,11 +42,17 @@ EM_API em_result_t em_util_parse_vargs(em_pos_t *pos, em_value_t *args, size_t n
 	size_t i = 0;
 	char c = 0;
 	char rc = 0; /* repeat character */
+	void *pointer = NULL; /* argument pointer */
+
 	while (*format && i < nargs) {
 
 		if (rc || *format == '*')
 			rc = c;
-		else c = *format++;
+		else {
+			
+			c = *format++;
+			pointer = va_arg(vargs, void *);
+		}
 
 		em_value_t arg = args[i++];
 		switch (c) {
@@ -55,7 +61,7 @@ EM_API em_result_t em_util_parse_vargs(em_pos_t *pos, em_value_t *args, size_t n
 			case 'v':
 				if (rc) break;
 
-				em_value_t *pvalue = va_arg(vargs, em_value_t *);
+				em_value_t *pvalue = (em_value_t *)pointer;
 				if (pvalue) *pvalue = arg;
 				break;
 
@@ -66,7 +72,7 @@ EM_API em_result_t em_util_parse_vargs(em_pos_t *pos, em_value_t *args, size_t n
 					INVALID_ARGUMENTS;
 				if (rc) break;
 
-				em_value_t *pnumber = va_arg(vargs, em_value_t *);
+				em_value_t *pnumber = (em_value_t *)pointer;
 				if (pnumber) *pnumber = arg;
 				break;
 
@@ -76,7 +82,7 @@ EM_API em_result_t em_util_parse_vargs(em_pos_t *pos, em_value_t *args, size_t n
 					INVALID_ARGUMENTS;
 				if (rc) break;
 
-				em_inttype_t *pinteger = va_arg(vargs, em_inttype_t *);
+				em_inttype_t *pinteger = (em_inttype_t *)pointer;
 				if (pinteger) *pinteger = arg.value.te_inttype;
 				break;
 
@@ -86,7 +92,7 @@ EM_API em_result_t em_util_parse_vargs(em_pos_t *pos, em_value_t *args, size_t n
 					INVALID_ARGUMENTS;
 				if (rc) break;
 
-				em_floattype_t *pfloat = va_arg(vargs, em_floattype_t *);
+				em_floattype_t *pfloat = (em_floattype_t *)pointer;
 				if (pfloat) *pfloat = arg.value.te_floattype;
 				break;
 
@@ -96,7 +102,7 @@ EM_API em_result_t em_util_parse_vargs(em_pos_t *pos, em_value_t *args, size_t n
 					INVALID_ARGUMENTS;
 				if (rc) break;
 
-				em_value_t *pobject = va_arg(vargs, em_value_t *);
+				em_value_t *pobject = (em_value_t *)pointer;
 				if (pobject) *pobject = arg;
 				break;
 
@@ -106,7 +112,7 @@ EM_API em_result_t em_util_parse_vargs(em_pos_t *pos, em_value_t *args, size_t n
 					INVALID_ARGUMENTS;
 				if (rc) break;
 
-				em_value_t *pstring = va_arg(vargs, em_value_t *);
+				em_value_t *pstring = (em_value_t *)pointer;
 				if (pstring) *pstring = arg;
 				break;
 
@@ -116,7 +122,7 @@ EM_API em_result_t em_util_parse_vargs(em_pos_t *pos, em_value_t *args, size_t n
 					INVALID_ARGUMENTS;
 				if (rc) break;
 
-				const em_wchar_t **pstringdata = va_arg(vargs, const em_wchar_t **);
+				const em_wchar_t **pstringdata = (const em_wchar_t **)pointer;
 				if (pstringdata) *pstringdata = EM_STRING(EM_OBJECT_FROM_VALUE(arg))->data;
 				break;
 
@@ -126,7 +132,7 @@ EM_API em_result_t em_util_parse_vargs(em_pos_t *pos, em_value_t *args, size_t n
 					INVALID_ARGUMENTS;
 				if (rc) break;
 
-				em_value_t *plist = va_arg(vargs, em_value_t *);
+				em_value_t *plist = (em_value_t *)pointer;
 				if (plist) *plist = arg;
 				break;
 
@@ -136,7 +142,7 @@ EM_API em_result_t em_util_parse_vargs(em_pos_t *pos, em_value_t *args, size_t n
 					INVALID_ARGUMENTS;
 				if (rc) break;
 
-				em_value_t *pmap = va_arg(vargs, em_value_t *);
+				em_value_t *pmap = (em_value_t *)pointer;
 				if (pmap) *pmap = arg;
 				break;
 
