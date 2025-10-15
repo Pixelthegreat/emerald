@@ -30,6 +30,7 @@
 #include <emerald/function.h>
 #include <emerald/none.h>
 #include <emerald/util.h>
+#include <emerald/class.h>
 #include <emerald/module.h>
 #include <emerald/module/site.h>
 #include <emerald/module/os.h>

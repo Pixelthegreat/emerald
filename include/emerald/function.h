@@ -39,4 +39,7 @@ typedef struct em_function {
 EM_API em_value_t em_builtin_function_new(const char *name, em_builtin_function_handler_t handler); /* create builtin function */
 EM_API em_value_t em_function_new(em_node_t *function_node, em_node_t *body_node, const char *name, size_t nargnames, const char **argnames); /* create function */
 
+EM_API em_bool_t em_is_builtin_function(em_value_t v); /* check if value is builtin function */
+EM_API em_bool_t em_is_function(em_value_t v); /* check if value is function */
+
 #endif /* EMERALD_FUNCTION_H */

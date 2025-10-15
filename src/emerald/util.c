@@ -25,6 +25,12 @@ EM_API void em_util_set_value(em_value_t map, const char *name, em_value_t value
 	em_map_set(map, em_utf8_strhash(name), value);
 }
 
+/* get value with utf8 name */
+EM_API em_value_t em_util_get_value(em_value_t map, const char *name) {
+
+	return em_map_get(map, em_utf8_strhash(name));
+}
+
 /* set value with utf8 name to utf8 string */
 EM_API void em_util_set_string(em_value_t map, const char *name, const char *value) {
 

@@ -71,6 +71,7 @@ EM_API em_value_t em_context_visit_for(em_context_t *context, em_node_t *node); 
 EM_API em_value_t em_context_visit_foreach(em_context_t *context, em_node_t *node); /* visit foreach statement */
 EM_API em_value_t em_context_visit_while(em_context_t *context, em_node_t *node); /* visit while statement */
 EM_API em_value_t em_context_visit_func(em_context_t *context, em_node_t *node); /* visit func statement */
+EM_API em_value_t em_context_visit_class(em_context_t *context, em_node_t *node); /* visit class statement */
 EM_API em_value_t em_context_visit_puts(em_context_t *context, em_node_t *node); /* visit puts statement */
 
 EM_API void em_context_destroy(em_context_t *context); /* destroy context */

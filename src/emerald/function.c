@@ -130,3 +130,15 @@ EM_API em_value_t em_function_new(em_node_t *function_node, em_node_t *body_node
 
 	return value;
 }
+
+/* check if value is builtin function */
+EM_API em_bool_t em_is_builtin_function(em_value_t v) {
+
+	return v.type == EM_VALUE_TYPE_OBJECT && EM_OBJECT_FROM_VALUE(v)->type == &builtin_type;
+}
+
+/* check if value is function */
+EM_API em_bool_t em_is_function(em_value_t v) {
+
+	return v.type == EM_VALUE_TYPE_OBJECT && EM_OBJECT_FROM_VALUE(v)->type == &type;
+}

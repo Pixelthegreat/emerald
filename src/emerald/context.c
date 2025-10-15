@@ -18,6 +18,7 @@
 #include <emerald/list.h>
 #include <emerald/none.h>
 #include <emerald/function.h>
+#include <emerald/class.h>
 #include <emerald/context.h>
 
 /* visitors */
@@ -43,6 +44,7 @@ static em_value_t (*visitors[EM_NODE_TYPE_COUNT])(em_context_t *, em_node_t *) =
 	[EM_NODE_TYPE_FOREACH] = em_context_visit_foreach,
 	[EM_NODE_TYPE_WHILE] = em_context_visit_while,
 	[EM_NODE_TYPE_FUNC] = em_context_visit_func,
+	[EM_NODE_TYPE_CLASS] = em_context_visit_class,
 	[EM_NODE_TYPE_PUTS] = em_context_visit_puts,
 };
 
@@ -1055,6 +1057,54 @@ EM_API em_value_t em_context_visit_func(em_context_t *context, em_node_t *node) 
 	if (node->flags) em_context_set_value(context, em_utf8_strhash(name), value);
 
 	return value;
+}
+
+/* visit class statement */
+EM_API em_value_t em_context_visit_class(em_context_t *context, em_node_t *node) {
+
+	em_token_t *name_token = em_node_get_token(node, 0);
+	em_node_t *base_node = node->first;
+	em_node_t *body_node = base_node->next;
+
+	if (!body_node) {
+
+		body_node = base_node;
+		base_node = NULL;
+	}
+
+	/* evaluate base class */
+	em_value_t base = EM_VALUE_FAIL;
+	if (base_node) {
+
+		base = em_context_visit(context, base_node);
+		if (!EM_VALUE_OK(base)) return EM_VALUE_FAIL;
+
+		if (!em_is_class(base)) {
+
+			em_log_runtime_error(&base_node->pos, "Base class is not a class");
+			em_value_delete(base);
+			return EM_VALUE_FAIL;
+		}
+	}
+
+	/* evaluate body of class */
+	if (em_context_push_scope(context) != EM_RESULT_SUCCESS)
+		return EM_VALUE_FAIL;
+
+	em_value_t result = em_context_visit(context, body_node);
+	if (!EM_VALUE_OK(result)) {
+
+		em_context_pop_scope(context);
+		em_value_delete(base);
+		return EM_VALUE_FAIL;
+	}
+
+	em_value_t class = em_class_new(node, name_token->value, base, context->scopestack[context->nscopestack-1]);
+	em_context_pop_scope(context);
+
+	/* set value */
+	em_context_set_value(context, em_utf8_strhash(name_token->value), class);
+	return class;
 }
 
 /* visit puts statement */
