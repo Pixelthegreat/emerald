@@ -207,6 +207,7 @@ EM_API em_result_t shell_application_run(int argc, const char **argv) {
 /* clean up resources */
 EM_API void shell_application_destroy(void) {
 
+	em_module_destroy_all(&context);
 	em_context_destroy(&context);
 	em_quit();
 }

@@ -14,9 +14,11 @@
 /* module */
 typedef struct em_module {
 	em_result_t (*initialize)(em_context_t *, em_value_t); /* initialize module */
+	void (*destroy)(em_context_t *); /* clean up module resources */
 } em_module_t;
 
 /* functions */
 EM_API em_result_t em_module_init_all(em_context_t *context); /* initialize all modules */
+EM_API void em_module_destroy_all(em_context_t *context); /* destroy all modules */
 
 #endif /* EMERALD_MODULE_H */

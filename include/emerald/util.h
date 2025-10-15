@@ -8,13 +8,14 @@
  * Format guide for em_util_parse_args:
  *   - v: any value
  *   - n: number
- *   - i: integer
- *   - f: floating point
+ *   - i: integer value
+ *   - f: floating point value
  *   - o: object
  *   - w: wide string object
  *   - W: wide string data pointer
  *   - l: list
  *   - m: map
+ *   - b: byte array
  * The '*' character works like a regex zero or more
  * repeat, and should if necessary follow the last
  * token.

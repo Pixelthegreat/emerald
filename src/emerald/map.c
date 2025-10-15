@@ -87,6 +87,7 @@ EM_API em_value_t em_map_new(void) {
 
 	map->first = NULL;
 	map->last = NULL;
+	map->userdata = NULL;
 
 	return value;
 }

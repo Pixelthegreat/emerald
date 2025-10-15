@@ -11,6 +11,7 @@
 #include <emerald/hash.h>
 #include <emerald/string.h>
 #include <emerald/list.h>
+#include <emerald/module/array.h>
 #include <emerald/util.h>
 
 #define INVALID_ARGUMENTS ({\
@@ -145,6 +146,15 @@ EM_API em_result_t em_util_parse_vargs(em_pos_t *pos, em_value_t *args, size_t n
 				em_value_t *pmap = (em_value_t *)pointer;
 				if (pmap) *pmap = arg;
 				break;
+
+			/* byte array */
+			case 'b':
+				if (!em_is_byte_array(arg))
+					INVALID_ARGUMENTS;
+				if (rc) break;
+
+				em_value_t *pbarray = (em_value_t *)pointer;
+				if (pbarray) *pbarray = arg;
 
 			/* error */
 			default:

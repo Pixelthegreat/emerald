@@ -22,6 +22,7 @@ typedef struct em_map {
 	em_object_t base;
 	em_map_entry_t *first; /* first entry */
 	em_map_entry_t *last; /* last entry */
+	void *userdata; /* user data */
 } em_map_t;
 
 #define EM_MAP(p) ((em_map_t *)(p))
