@@ -95,5 +95,6 @@ typedef em_uint24_t em_wchar_t; /* useful for wide but not completely wide chara
 #define EM_WCZ EM_U24Z
 
 struct em_context;
+struct em_value;
 
 #endif /* EM_CORE_H */

@@ -16,6 +16,14 @@ class Animal then
 
 		puts string.format('The {} says \'{}\'', this.name, this.speech)
 	end
+	func _toString(this) then
+
+		return string.format('<Animal \'{}\'>', this.name)
+	end
+	func _call(this, param) then
+
+		return param
+	end
 end
 
 class Cow of Animal then
@@ -32,3 +40,5 @@ end
 
 let animal = Cow()
 animal.speak()
+
+puts animal, animal('A')

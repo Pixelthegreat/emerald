@@ -11,6 +11,7 @@
 #include <emerald/hash.h>
 #include <emerald/string.h>
 #include <emerald/list.h>
+#include <emerald/class.h>
 #include <emerald/module/array.h>
 #include <emerald/util.h>
 
@@ -41,6 +42,18 @@ EM_API void em_util_set_string(em_value_t map, const char *name, const char *val
 EM_API void em_util_set_function(em_value_t map, const char *name, em_builtin_function_handler_t function) {
 
 	em_map_set(map, em_utf8_strhash(name), em_builtin_function_new(name, function));
+}
+
+/* set value in class */
+EM_API void em_util_set_class_value(em_value_t cls, const char *name, em_value_t value) {
+
+	em_map_set(EM_CLASS(EM_OBJECT_FROM_VALUE(cls))->map, em_utf8_strhash(name), value);
+}
+
+/* set method in class */
+EM_API void em_util_set_class_method(em_value_t cls, const char *name, em_builtin_function_handler_t function) {
+
+	em_map_set(EM_CLASS(EM_OBJECT_FROM_VALUE(cls))->map, em_utf8_strhash(name), em_builtin_function_new(name, function));
 }
 
 /* parse arguments with variadic list */

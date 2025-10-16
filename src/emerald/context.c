@@ -37,6 +37,7 @@ static em_value_t (*visitors[EM_NODE_TYPE_COUNT])(em_context_t *, em_node_t *) =
 	[EM_NODE_TYPE_CONTINUE] = em_context_visit_continue,
 	[EM_NODE_TYPE_BREAK] = em_context_visit_break,
 	[EM_NODE_TYPE_RETURN] = em_context_visit_return,
+	[EM_NODE_TYPE_RAISE] = em_context_visit_raise,
 	[EM_NODE_TYPE_INCLUDE] = em_context_visit_include,
 	[EM_NODE_TYPE_LET] = em_context_visit_let,
 	[EM_NODE_TYPE_IF] = em_context_visit_if,
@@ -45,6 +46,7 @@ static em_value_t (*visitors[EM_NODE_TYPE_COUNT])(em_context_t *, em_node_t *) =
 	[EM_NODE_TYPE_WHILE] = em_context_visit_while,
 	[EM_NODE_TYPE_FUNC] = em_context_visit_func,
 	[EM_NODE_TYPE_CLASS] = em_context_visit_class,
+	[EM_NODE_TYPE_TRY] = em_context_visit_try,
 	[EM_NODE_TYPE_PUTS] = em_context_visit_puts,
 };
 
@@ -125,6 +127,8 @@ EM_API em_value_t em_context_run_text(em_context_t *context, const char *path, c
 	if (!context || !context->init) return EM_VALUE_FAIL;
 
 	em_lexer_reset(&context->lexer, path, text, len);
+	context->lexer.pos.context = context;
+
 	if (em_lexer_make_tokens(&context->lexer) != EM_RESULT_SUCCESS)
 		return EM_VALUE_FAIL;
 
@@ -655,14 +659,14 @@ EM_API em_value_t em_context_visit_call(em_context_t *context, em_node_t *node) 
 /* visit continue statement */
 EM_API em_value_t em_context_visit_continue(em_context_t *context, em_node_t *node) {
 
-	em_log_raise("SystemContinue", &node->pos, "Not in a loop");
+	em_log_raise(&em_class_system_continue, &node->pos, "Not in a loop");
 	return EM_VALUE_FAIL;
 }
 
 /* visit break statement */
 EM_API em_value_t em_context_visit_break(em_context_t *context, em_node_t *node) {
 
-	em_log_raise("SystemBreak", &node->pos, "Not in a loop");
+	em_log_raise(&em_class_system_break, &node->pos, "Not in a loop");
 	return EM_VALUE_FAIL;
 }
 
@@ -676,7 +680,49 @@ EM_API em_value_t em_context_visit_return(em_context_t *context, em_node_t *node
 
 	context->pass = value;
 
-	em_log_raise("SystemReturn", &node->pos, "Not in a function");
+	em_log_raise(&em_class_system_return, &node->pos, "Not in a function");
+	return EM_VALUE_FAIL;
+}
+
+/* visit raise statement */
+EM_API em_value_t em_context_visit_raise(em_context_t *context, em_node_t *node) {
+
+	em_node_t *value_node = node->first;
+
+	em_value_t value = em_context_visit(context, value_node);
+	if (!EM_VALUE_OK(value)) return EM_VALUE_FAIL;
+
+	if (!em_is_map(value)) {
+
+		em_log_runtime_error(&node->pos, "Expected map");
+		em_value_delete(value);
+		return EM_VALUE_FAIL;
+	}
+
+	/* get class and message */
+	em_value_t class = em_map_get(value, em_utf8_strhash("_class"));
+	if (!em_is_class(class)) {
+
+		em_log_runtime_error(&node->pos, "Expected map to be instance of class");
+		return EM_VALUE_FAIL;
+	}
+
+	em_value_t string = em_value_to_string(value, &node->pos);
+	if (!EM_VALUE_OK(string)) {
+
+		em_value_delete(value);
+		return EM_VALUE_FAIL;
+	}
+
+	char buf[128];
+	em_wchar_to_utf8(buf, sizeof(buf), EM_STRING(EM_OBJECT_FROM_VALUE(string))->data);
+
+	if (!em_value_is(value, string))
+		em_value_delete(string);
+
+	context->pass = value;
+
+	em_log_raise(&class, &node->pos, buf);
 	return EM_VALUE_FAIL;
 }
 
@@ -894,13 +940,13 @@ EM_API em_value_t em_context_visit_for(em_context_t *context, em_node_t *node) {
 		if (!EM_VALUE_OK(result)) {
 
 			/* continue or break statement */
-			if (em_log_catch("SystemContinue")) {
+			if (em_log_catch(&em_class_system_continue)) {
 
 				result = em_none;
 				em_log_clear();
 				continue;
 			}
-			if (em_log_catch("SystemBreak")) {
+			if (em_log_catch(&em_class_system_break)) {
 
 				result = em_none;
 				em_log_clear();
@@ -959,13 +1005,13 @@ EM_API em_value_t em_context_visit_foreach(em_context_t *context, em_node_t *nod
 		if (!EM_VALUE_OK(result)) {
 
 			/* continue or break statement */
-			if (em_log_catch("SystemContinue")) {
+			if (em_log_catch(&em_class_system_continue)) {
 
 				result = em_none;
 				em_log_clear();
 				continue;
 			}
-			if (em_log_catch("SystemBreak")) {
+			if (em_log_catch(&em_class_system_break)) {
 
 				result = em_none;
 				em_log_clear();
@@ -1003,13 +1049,13 @@ EM_API em_value_t em_context_visit_while(em_context_t *context, em_node_t *node)
 		if (!EM_VALUE_OK(result)) {
 
 			/* continue or break statement */
-			if (em_log_catch("SystemContinue")) {
+			if (em_log_catch(&em_class_system_continue)) {
 
 				result = em_none;
 				em_log_clear();
 				continue;
 			}
-			if (em_log_catch("SystemBreak")) {
+			if (em_log_catch(&em_class_system_break)) {
 
 				result = em_none;
 				em_log_clear();
@@ -1105,6 +1151,41 @@ EM_API em_value_t em_context_visit_class(em_context_t *context, em_node_t *node)
 	/* set value */
 	em_context_set_value(context, em_utf8_strhash(name_token->value), class);
 	return class;
+}
+
+/* visit try statement */
+EM_API em_value_t em_context_visit_try(em_context_t *context, em_node_t *node) {
+
+	em_node_t *try_node = node->first;
+	em_token_t *name_token = em_node_get_token(node, 0);
+	em_node_t *class_node = try_node->next;
+	em_node_t *catch_node = class_node->next;
+
+	em_value_t class = em_context_visit(context, class_node);
+	if (!EM_VALUE_OK(class)) return EM_VALUE_FAIL;
+
+	if (!em_is_class(class)) {
+
+		em_log_runtime_error(&catch_node->pos, "Expected class");
+		em_value_delete(class);
+		return EM_VALUE_FAIL;
+	}
+
+	/* catch an error */
+	em_value_t result = em_context_visit(context, try_node);
+	if (!EM_VALUE_OK(result) && em_log_catch(&class)) {
+
+		em_log_clear();
+
+		/* create error object */
+		if (!EM_VALUE_OK(context->pass))
+			em_error_instantiate(&context->pass, &class, em_log_get_message());
+
+		em_context_set_value(context, em_utf8_strhash(name_token->value), context->pass);
+		result = em_context_visit(context, catch_node);
+	}
+	em_value_delete(class);
+	return result;
 }
 
 /* visit puts statement */

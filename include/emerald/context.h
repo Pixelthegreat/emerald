@@ -64,6 +64,7 @@ EM_API em_value_t em_context_visit_call(em_context_t *context, em_node_t *node);
 EM_API em_value_t em_context_visit_continue(em_context_t *context, em_node_t *node); /* visit continue statement */
 EM_API em_value_t em_context_visit_break(em_context_t *context, em_node_t *node); /* visit break statement */
 EM_API em_value_t em_context_visit_return(em_context_t *context, em_node_t *node); /* visit return statement */
+EM_API em_value_t em_context_visit_raise(em_context_t *context, em_node_t *node); /* visit raise statement */
 EM_API em_value_t em_context_visit_include(em_context_t *context, em_node_t *node); /* visit include statement */
 EM_API em_value_t em_context_visit_let(em_context_t *context, em_node_t *node); /* visit let statement */
 EM_API em_value_t em_context_visit_if(em_context_t *context, em_node_t *node); /* visit if statement */
@@ -72,6 +73,7 @@ EM_API em_value_t em_context_visit_foreach(em_context_t *context, em_node_t *nod
 EM_API em_value_t em_context_visit_while(em_context_t *context, em_node_t *node); /* visit while statement */
 EM_API em_value_t em_context_visit_func(em_context_t *context, em_node_t *node); /* visit func statement */
 EM_API em_value_t em_context_visit_class(em_context_t *context, em_node_t *node); /* visit class statement */
+EM_API em_value_t em_context_visit_try(em_context_t *context, em_node_t *node); /* visit try statement */
 EM_API em_value_t em_context_visit_puts(em_context_t *context, em_node_t *node); /* visit puts statement */
 
 EM_API void em_context_destroy(em_context_t *context); /* destroy context */

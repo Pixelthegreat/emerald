@@ -103,6 +103,8 @@ static em_value_t class_call(em_context_t *context, em_value_t v, em_value_t *ar
 			return EM_VALUE_FAIL;
 		}
 	}
+
+	em_util_set_value(instance, "_class", v);
 	return instance;
 }
 
@@ -184,4 +186,20 @@ EM_API em_bool_t em_is_method(em_value_t v) {
 EM_API em_bool_t em_is_class(em_value_t v) {
 
 	return v.type == EM_VALUE_TYPE_OBJECT && EM_OBJECT_FROM_VALUE(v)->type == &class_type;
+}
+
+/* check if a class inherits a base class */
+EM_API em_bool_t em_class_inherits(em_value_t cls, em_value_t base) {
+
+	if (!em_is_class(cls) || !em_is_class(base))
+		return EM_FALSE;
+
+	em_class_t *current = EM_CLASS(EM_OBJECT_FROM_VALUE(cls));
+	while (current) {
+
+		if (current == EM_CLASS(EM_OBJECT_FROM_VALUE(base)))
+			return EM_TRUE;
+		current = EM_CLASS(EM_OBJECT_FROM_VALUE(current->clsbase));
+	}
+	return EM_FALSE;
 }

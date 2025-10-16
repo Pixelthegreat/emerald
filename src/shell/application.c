@@ -133,7 +133,7 @@ static void repl(void) {
 		/* run line */
 		em_value_t res = em_context_run_text(&context, "<stdin>", shbuf, len);
 
-		if (em_log_catch("SystemExit")) {
+		if (em_log_catch(&em_class_system_exit)) {
 
 			result = EM_RESULT_FROM_CODE(context.pass.value.te_inttype);
 			running = EM_FALSE;
@@ -144,7 +144,21 @@ static void repl(void) {
 			em_log_flush();
 		}
 
-		if (EM_VALUE_OK(res)) em_value_print(res, NULL);
+		/* print value */
+		em_pos_t pos = {
+			.path = "<stdin>",
+			.text = NULL,
+			.len = 0,
+			.index = 0,
+			.lastchsz = 0,
+			.line = 1,
+			.column = 1,
+			.lstart = 0,
+			.lend = 0,
+			.cc = 0,
+			.context = &context,
+		};
+		if (EM_VALUE_OK(res)) em_value_print(res, &pos);
 		em_value_delete(res);
 	}
 }
@@ -190,7 +204,7 @@ EM_API em_result_t shell_application_run(int argc, const char **argv) {
 	else {
 		em_value_t res = em_context_run_file(&context, NULL, arg_filename);
 
-		if (em_log_catch("SystemExit"))
+		if (em_log_catch(&em_class_system_exit))
 			result = EM_RESULT_FROM_CODE(context.pass.value.te_inttype);
 
 		else if (em_log_catch(NULL)) {

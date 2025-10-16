@@ -7,8 +7,10 @@
 #include <stdlib.h>
 #include <emerald/core.h>
 #include <emerald/log.h>
+#include <emerald/hash.h>
 #include <emerald/memory.h>
 #include <emerald/string.h>
+#include <emerald/context.h>
 #include <emerald/map.h>
 
 /* object type */
@@ -16,6 +18,7 @@ static em_value_t get_by_hash(em_value_t v, em_hash_t hash, em_pos_t *pos);
 static em_value_t get_by_index(em_value_t v, em_value_t i, em_pos_t *pos);
 static em_result_t set_by_hash(em_value_t a, em_hash_t hash, em_value_t b, em_pos_t *pos);
 static em_result_t set_by_index(em_value_t a, em_value_t i, em_value_t b, em_pos_t *pos);
+static em_value_t call(em_context_t *context, em_value_t v, em_value_t *args, size_t nargs, em_pos_t *pos);
 static em_value_t to_string(em_value_t v, em_pos_t *pos);
 
 em_object_type_t type = {
@@ -23,6 +26,7 @@ em_object_type_t type = {
 	.get_by_index = get_by_index,
 	.set_by_hash = set_by_hash,
 	.set_by_index = set_by_index,
+	.call = call,
 	.to_string = to_string,
 };
 
@@ -54,10 +58,27 @@ static em_result_t set_by_index(em_value_t a, em_value_t i, em_value_t b, em_pos
 	return EM_RESULT_SUCCESS;
 }
 
+/* call map */
+static em_value_t call(em_context_t *context, em_value_t v, em_value_t *args, size_t nargs, em_pos_t *pos) {
+
+	em_value_t value = em_map_get(v, em_utf8_strhash("_call"));
+	if (!EM_VALUE_OK(value)) {
+
+		em_log_runtime_error(pos, "Invalid operation");
+		return EM_VALUE_FAIL;
+	}
+	return em_value_call(context, value, args, nargs, pos);
+}
+
 /* get string representation of map */
 static em_value_t to_string(em_value_t v, em_pos_t *pos) {
 
-	return em_string_new_from_utf8("{...}", 5);
+	em_value_t value = em_map_get(v, em_utf8_strhash("_toString"));
+	if (!EM_VALUE_OK(value))
+		return em_string_new_from_utf8("{...}", 5);
+
+	em_value_t args[1] = {};
+	return em_value_call(pos->context, value, args, 0, pos);
 }
 
 /* free map */

@@ -9,6 +9,7 @@
 #include <stdarg.h>
 #include <emerald/core.h>
 #include <emerald/utf8.h>
+#include <emerald/class.h>
 #include <emerald/log.h>
 
 #ifdef DEBUG
@@ -24,6 +25,7 @@ static FILE *logfile = NULL;
 /* raised error */
 static em_bool_t err = EM_FALSE;
 static em_bool_t printerr = EM_FALSE;
+static em_value_t errclass = EM_VALUE_FAIL;
 
 #define ERRNAMESZ 128
 static char errname[ERRNAMESZ];
@@ -31,6 +33,7 @@ static char errname[ERRNAMESZ];
 #define ERRBUFSZ 1024
 static char errbuf[ERRBUFSZ];
 static char *errbufp = errbuf;
+static const char *errmsg = errbuf;
 
 /* log level names */
 #define COL_GREEN "\e[32m"
@@ -111,6 +114,7 @@ EM_API void em_log_verror(const em_pos_t *pos, const char *fmt, va_list args) {
 	em_log_begin(EM_LOG_LEVEL_ERROR);
 	if (pos) em_log_printf(" (File '%s', Line %ld, Column %ld):\n  ", pos->path, pos->line, pos->column);
 	else em_log_printf(": ");
+	errmsg = errbufp;
 
 	em_log_vprintf(fmt, args);
 
@@ -127,14 +131,17 @@ EM_API void em_log_verror(const em_pos_t *pos, const char *fmt, va_list args) {
 }
 
 /* raise an error */
-EM_API void em_log_raise(const char *name, const em_pos_t *pos, const char *fmt, ...) {
+EM_API void em_log_raise(em_value_t *cls, const em_pos_t *pos, const char *fmt, ...) {
 
 	if (err) {
 
 		em_log_warning("Error already raised (conflicting: '%s')", fmt);
 		return;
 	}
+	const char *name = EM_CLASS(EM_OBJECT_FROM_VALUE(*cls))->name;
 	strncpy(errname, name, ERRNAMESZ);
+
+	errclass = *cls;
 
 	/* print the error message to a string */
 	err = EM_TRUE;
@@ -148,11 +155,17 @@ EM_API void em_log_raise(const char *name, const em_pos_t *pos, const char *fmt,
 	printerr = EM_FALSE;
 }
 
+/* get raised error message */
+EM_API const char *em_log_get_message(void) {
+
+	return errmsg;
+}
+
 /* check if raised error has such name */
-EM_API em_bool_t em_log_catch(const char *name) {
+EM_API em_bool_t em_log_catch(em_value_t *cls) {
 
 	if (!err) return EM_FALSE;
-	else if (!name || !strcmp(errname, name))
+	else if (!cls || em_class_inherits(errclass, *cls))
 		return EM_TRUE;
 	return EM_FALSE;
 }
@@ -169,7 +182,7 @@ EM_API void em_log_clear(void) {
 	err = EM_FALSE;
 	printerr = EM_FALSE;
 	errbufp = errbuf;
-	return;
+	errmsg = errbuf;
 }
 
 /* print raised error if present */
@@ -183,6 +196,9 @@ EM_API void em_log_flush(void) {
 
 	em_log_printf("%s", errbuf);
 	err = EM_FALSE;
+	printerr = EM_FALSE;
+	errbufp = errbuf;
+	errmsg = errbuf;
 }
 
 /* begin log message */

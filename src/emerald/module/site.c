@@ -63,7 +63,7 @@ static em_value_t site_exit(em_context_t *context, em_value_t *args, size_t narg
 	if (nargs && em_util_parse_args(pos, args, nargs, "i", &context->pass.value.te_inttype) != EM_RESULT_SUCCESS)
 		return EM_VALUE_FAIL;
 
-	em_log_raise("SystemExit", pos, "Exited");
+	em_log_raise(&em_class_system_exit, pos, "Exited");
 	return EM_VALUE_FAIL;
 }
 
@@ -125,6 +125,11 @@ static em_result_t initialize(em_context_t *context, em_value_t map) {
 	em_util_set_value(map, "true", EM_VALUE_TRUE);
 	em_util_set_value(map, "false", EM_VALUE_FALSE);
 	em_util_set_value(map, "none", em_none);
+
+	/* error classes */
+	em_util_set_value(map, "Error", em_class_error);
+	em_util_set_value(map, "SyntaxError", em_class_syntax_error);
+	em_util_set_value(map, "RuntimeError", em_class_runtime_error);
 
 	/* create argument list */
 	em_value_t argv;

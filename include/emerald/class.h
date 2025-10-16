@@ -37,5 +37,6 @@ EM_API em_value_t em_class_new(em_node_t *node, const char *name, em_value_t bas
 
 EM_API em_bool_t em_is_method(em_value_t v); /* check if value is method */
 EM_API em_bool_t em_is_class(em_value_t v); /* check if value is class */
+EM_API em_bool_t em_class_inherits(em_value_t cls, em_value_t base); /* check if a class inherits a base class */
 
 #endif /* EMERALD_CLASS_H */

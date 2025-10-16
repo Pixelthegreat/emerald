@@ -76,7 +76,7 @@ static em_value_t call(struct em_context *context, em_value_t v, em_value_t *arg
 	em_context_pop_scope(context);
 	em_value_decref(result);
 
-	if (em_log_catch("SystemReturn")) {
+	if (em_log_catch(&em_class_system_return)) {
 
 		em_log_clear();
 		return context->pass;

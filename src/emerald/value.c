@@ -641,7 +641,7 @@ EM_API void em_value_print(em_value_t v, em_pos_t *pos) {
 	em_value_t string = em_value_to_string(v, pos);
 	if (!EM_VALUE_OK(string)) {
 
-		em_log_clear();
+		em_log_flush();
 		return;
 	}
 
