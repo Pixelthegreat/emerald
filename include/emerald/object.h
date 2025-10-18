@@ -22,6 +22,7 @@ typedef struct em_object_type {
 	em_value_t (*modulo)(em_value_t, em_value_t, em_pos_t *);
 	em_value_t (*or)(em_value_t, em_value_t, em_pos_t *);
 	em_value_t (*and)(em_value_t, em_value_t, em_pos_t *);
+	em_value_t (*not)(em_value_t, em_pos_t *);
 	em_value_t (*shift_left)(em_value_t, em_value_t, em_pos_t *);
 	em_value_t (*shift_right)(em_value_t, em_value_t, em_pos_t *);
 	em_value_t (*compare_equal)(em_value_t, em_value_t, em_pos_t *);
@@ -64,6 +65,7 @@ EM_API em_value_t em_object_divide(em_value_t a, em_value_t b, em_pos_t *pos); /
 EM_API em_value_t em_object_modulo(em_value_t a, em_value_t b, em_pos_t *pos); /* modulo objects */
 EM_API em_value_t em_object_or(em_value_t a, em_value_t b, em_pos_t *pos); /* or objects */
 EM_API em_value_t em_object_and(em_value_t a, em_value_t b, em_pos_t *pos); /* and objects */
+EM_API em_value_t em_object_not(em_value_t v, em_pos_t *pos); /* bitwise not object */
 EM_API em_value_t em_object_shift_left(em_value_t a, em_value_t b, em_pos_t *pos); /* shift left */
 EM_API em_value_t em_object_shift_right(em_value_t a, em_value_t b, em_pos_t *pos); /* shift right */
 EM_API em_value_t em_object_compare_equal(em_value_t a, em_value_t b, em_pos_t *pos); /* compare if objects are equal */

@@ -93,6 +93,10 @@ EM_API em_result_t em_context_init(em_context_t *context, const char **argv) {
 	context->ndirstack = 2;
 	context->dirstack[0] = ".";
 	context->dirstack[1] = EM_STDLIB_DIR;
+
+	const char *stdlib_path = getenv("EM_PATH");
+	if (stdlib_path) context->dirstack[context->ndirstack++] = stdlib_path;
+
 	context->nscopestack = 1;
 	context->scopestack[0] = em_map_new();
 	em_value_incref(context->scopestack[0]);
@@ -486,10 +490,12 @@ EM_API em_value_t em_context_visit_unary_operation(em_context_t *context, em_nod
 	/* operation */
 	em_value_t result;
 
-	if (!strcmp(token->value, "+"))
+	if (token->type == EM_TOKEN_TYPE_PLUS)
 		result = right;
-	else if (!strcmp(token->value, "-"))
+	else if (token->type == EM_TOKEN_TYPE_MINUS)
 		result = em_value_multiply(right, EM_VALUE_INT(-1), &node->pos);
+	else if (token->type == EM_TOKEN_TYPE_BITWISE_NOT)
+		result = em_value_not(right, &node->pos);
 	else if (!strcmp(token->value, "not"))
 		result = EM_VALUE_INT_INV(em_value_is_true(right, &node->pos));
 	else {
@@ -786,7 +792,9 @@ EM_API em_value_t em_context_visit_let(em_context_t *context, em_node_t *node) {
 		em_token_t *token = em_node_get_token(node, i);
 		em_hash_t hash = em_utf8_strhash(token->value);
 
-		container = em_value_get_by_hash(container, hash, &token->pos);
+		if (!i) container = em_context_get_value(context, hash);
+		else container = em_value_get_by_hash(container, hash, &token->pos);
+
 		if (!EM_VALUE_OK(container)) {
 
 			if (!em_log_catch(NULL)) {

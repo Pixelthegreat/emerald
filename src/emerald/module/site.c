@@ -5,6 +5,7 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <emerald/core.h>
 #include <emerald/utf8.h>
 #include <emerald/wchar.h>
@@ -14,6 +15,9 @@
 #include <emerald/list.h>
 #include <emerald/string.h>
 #include <emerald/module/site.h>
+
+#define READBUFSZ 4096
+static char readbuf[READBUFSZ];
 
 /* site module */
 static em_result_t initialize(em_context_t *context, em_value_t map);
@@ -110,6 +114,31 @@ static em_value_t site_println(em_context_t *context, em_value_t *args, size_t n
 	return em_none;
 }
 
+/* read string from stdin */
+static em_value_t site_readln(em_context_t *context, em_value_t *args, size_t nargs, em_pos_t *pos) {
+
+	em_value_t prompt = EM_VALUE_FAIL;
+
+	if (nargs && em_util_parse_args(pos, args, nargs, "w", &prompt) != EM_RESULT_SUCCESS)
+		return EM_VALUE_FAIL;
+
+	/* print optional prompt */
+	if (EM_VALUE_OK(prompt)) {
+
+		em_string_t *string = EM_STRING(EM_OBJECT_FROM_VALUE(prompt));
+		em_wchar_write(stdout, string->data, string->length);
+		fflush(stdout);
+	}
+
+	/* read string */
+	fgets(readbuf, READBUFSZ, stdin);
+	size_t len = strlen(readbuf);
+	if (len && readbuf[len-1] == '\n')
+		readbuf[--len] = 0;
+
+	return em_string_new_from_utf8(readbuf, em_utf8_strlen(readbuf));
+}
+
 /* initialize module */
 static em_result_t initialize(em_context_t *context, em_value_t map) {
 
@@ -120,6 +149,7 @@ static em_result_t initialize(em_context_t *context, em_value_t map) {
 	em_util_set_function(map, "exit", site_exit);
 	em_util_set_function(map, "print", site_print);
 	em_util_set_function(map, "println", site_println);
+	em_util_set_function(map, "readln", site_readln);
 
 	/* common variables */
 	em_util_set_value(map, "true", EM_VALUE_TRUE);

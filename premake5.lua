@@ -15,6 +15,12 @@ em_modules = {
 	'string',
 }
 
+if _TARGET_OS == 'windows' then
+elseif _TARGET_OS == 'eclair' then
+else
+	table.insert(em_modules, 'posix')
+end
+
 language 'C'
 cdialect 'C99'
 includedirs {'include'}
@@ -34,7 +40,7 @@ filter 'options:enable-asan'
 
 -- Core emerald interpreter --
 project 'emerald'
-	files {'src/emerald/**.c', 'include/emerald/**.h', 'include/emerald.h'}
+	files {'src/emerald/*.c', 'include/emerald/*.h', 'include/emerald.h'}
 	includedirs {'obj'}
 	links {'m'}
 	targetdir 'lib'
@@ -46,6 +52,8 @@ project 'emerald'
 	local em_module_proto = '/* Auto-generated header */\n'
 
 	for i, module in pairs(em_modules) do
+
+		files {string.format('src/emerald/module/%s.c', module)}
 
 		em_module_table = string.format('%s\t&em_module_%s,\n', em_module_table, module)
 		em_module_proto = string.format('%sEM_API em_module_t em_module_%s;\n', em_module_proto, module)

@@ -174,6 +174,7 @@ EM_API em_result_t em_util_parse_vargs(em_pos_t *pos, em_value_t *args, size_t n
 
 				em_value_t *pbarray = (em_value_t *)pointer;
 				if (pbarray) *pbarray = arg;
+				break;
 
 			/* error */
 			default:

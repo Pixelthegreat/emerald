@@ -111,6 +111,16 @@ EM_API em_value_t em_object_and(em_value_t a, em_value_t b, em_pos_t *pos) {
 	return object->type->and(a, b, pos);
 }
 
+/* bitwise not object */
+EM_API em_value_t em_object_not(em_value_t v, em_pos_t *pos) {
+
+	em_object_t *object = EM_OBJECT_FROM_VALUE(v);
+
+	if (!object->type->not) INVALID_OPERATION;
+
+	return object->type->not(v, pos);
+}
+
 /* shift left */
 EM_API em_value_t em_object_shift_left(em_value_t a, em_value_t b, em_pos_t *pos) {
 

@@ -30,6 +30,7 @@ static em_value_t divide_int(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t modulo_int(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t or_int(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t and_int(em_value_t a, em_value_t b, em_pos_t *pos);
+static em_value_t not_int(em_value_t v, em_pos_t *pos);
 static em_value_t shift_left_int(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t shift_right_int(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t compare_equal_int(em_value_t a, em_value_t b, em_pos_t *pos);
@@ -59,6 +60,7 @@ struct {
 	em_value_t (*modulo)(em_value_t, em_value_t, em_pos_t *);
 	em_value_t (*or)(em_value_t, em_value_t, em_pos_t *);
 	em_value_t (*and)(em_value_t, em_value_t, em_pos_t *);
+	em_value_t (*not)(em_value_t, em_pos_t *);
 	em_value_t (*shift_left)(em_value_t, em_value_t, em_pos_t *);
 	em_value_t (*shift_right)(em_value_t, em_value_t, em_pos_t *);
 	em_value_t (*compare_equal)(em_value_t, em_value_t, em_pos_t *);
@@ -83,6 +85,7 @@ struct {
 		.modulo = modulo_int,
 		.or = or_int,
 		.and = and_int,
+		.not = not_int,
 		.shift_left = shift_left_int,
 		.shift_right = shift_right_int,
 		.compare_equal = compare_equal_int,
@@ -113,6 +116,7 @@ struct {
 		.modulo = em_object_modulo,
 		.or = em_object_or,
 		.and = em_object_and,
+		.not = em_object_not,
 		.shift_left = em_object_shift_left,
 		.shift_right = em_object_shift_right,
 		.compare_equal = em_object_compare_equal,
@@ -214,6 +218,12 @@ static em_value_t and_int(em_value_t a, em_value_t b, em_pos_t *pos) {
 	if (b.type != EM_VALUE_TYPE_INT) INVALID_OPERATION;
 
 	return EM_VALUE_INT(a.value.te_inttype & b.value.te_inttype);
+}
+
+/* bitwise not int */
+static em_value_t not_int(em_value_t v, em_pos_t *pos) {
+
+	return EM_VALUE_INT(~v.value.te_inttype);
 }
 
 /* shift left ints */
@@ -498,6 +508,14 @@ EM_API em_value_t em_value_or(em_value_t a, em_value_t b, em_pos_t *pos) {
 EM_API em_value_t em_value_and(em_value_t a, em_value_t b, em_pos_t *pos) {
 
 	if (ops[a.type].and) return ops[a.type].and(a, b, pos);
+
+	INVALID_OPERATION;
+}
+
+/* bitwise not value */
+EM_API em_value_t em_value_not(em_value_t v, em_pos_t *pos) {
+
+	if (ops[v.type].not) return ops[v.type].not(v, pos);
 
 	INVALID_OPERATION;
 }
