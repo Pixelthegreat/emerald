@@ -557,6 +557,9 @@ EM_API em_value_t em_context_visit_binary_operation(em_context_t *context, em_no
 	else if (token->type == EM_TOKEN_TYPE_DOUBLE_EQUALS)
 		result = em_value_compare_equal(left, right, &node->pos);
 
+	else if (token->type == EM_TOKEN_TYPE_NOT_EQUALS)
+		result = EM_VALUE_INT_INV(em_value_compare_equal(left, right, &node->pos));
+
 	else if (token->type == EM_TOKEN_TYPE_LESS_THAN)
 		result = em_value_compare_less_than(left, right, &node->pos);
 

@@ -3,12 +3,16 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
+#define _POSIX_C_SOURCE 199309L
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <time.h>
 #include <unistd.h>
 #include <termios.h>
+#include <sys/select.h>
 #include <emerald/core.h>
 #include <emerald/log.h>
 #include <emerald/util.h>
@@ -61,7 +65,8 @@ DECLARE_FUNCTION(read) {
 		return EM_VALUE_FAIL;
 
 	em_byte_array_t *array = EM_BYTE_ARRAY(EM_OBJECT_FROM_VALUE(value));
-	if (array->mode != EM_BYTE_ARRAY_MODE_UNSIGNED_CHAR ||
+	if ((array->mode != EM_BYTE_ARRAY_MODE_UNSIGNED_CHAR &&
+	     array->mode != EM_BYTE_ARRAY_MODE_CHAR) ||
 	    (size_t)count > array->size) {
 
 		em_log_runtime_error(pos, "Invalid arguments");
@@ -82,14 +87,97 @@ DECLARE_FUNCTION(write) {
 		return EM_VALUE_FAIL;
 
 	em_byte_array_t *array = EM_BYTE_ARRAY(EM_OBJECT_FROM_VALUE(value));
-	if (array->mode != EM_BYTE_ARRAY_MODE_UNSIGNED_CHAR ||
-	    (size_t)count >= array->size) {
+	if ((array->mode != EM_BYTE_ARRAY_MODE_UNSIGNED_CHAR &&
+	     array->mode != EM_BYTE_ARRAY_MODE_CHAR) ||
+	    (size_t)count > array->size) {
 
 		em_log_runtime_error(pos, "Invalid arguments");
 		return EM_VALUE_FAIL;
 	}
 
 	return EM_VALUE_INT((em_inttype_t)write((int)fd, array->data, (size_t)count));
+}
+
+/* copy an fd set */
+static void copy_fd_set(fd_set *setfds, em_value_t array) {
+
+	FD_ZERO(setfds);
+
+	size_t count = EM_BYTE_ARRAY(EM_OBJECT_FROM_VALUE(array))->size;
+	for (size_t i = 0; i < count; i++) {
+
+		if (em_byte_array_get(array, i))
+			FD_SET((int)i, setfds);
+	}
+}
+
+static void copy_fd_array(em_value_t array, fd_set *setfds) {
+
+	size_t count = EM_BYTE_ARRAY(EM_OBJECT_FROM_VALUE(array))->size;
+	for (size_t i = 0; i < count; i++) {
+
+		if (!FD_ISSET((int)i, setfds))
+			em_byte_array_set(array, i, 0);
+	}
+}
+
+/* select file descriptors */
+DECLARE_FUNCTION(select) {
+
+	em_inttype_t nfds;
+	em_value_t readfds;
+	em_value_t writefds;
+	em_value_t exceptfds;
+	em_value_t timeout;
+
+	if (em_util_parse_args(pos, args, nargs, "i~b~b~b~n", &nfds, &readfds, &writefds, &exceptfds, &timeout) != EM_RESULT_SUCCESS)
+		return EM_VALUE_FAIL;
+
+	/* copy file descriptor sets */
+	fd_set rfds, wfds, efds;
+	fd_set *rfdsp = NULL, *wfdsp = NULL, *efdsp = NULL;
+
+	if (!em_value_is(em_none, readfds)) {
+
+		rfdsp = &rfds;
+		copy_fd_set(&rfds, readfds);
+	}
+	if (!em_value_is(em_none, writefds)) {
+
+		wfdsp = &wfds;
+		copy_fd_set(&wfds, writefds);
+	}
+	if (!em_value_is(em_none, exceptfds)) {
+
+		efdsp = &efds;
+		copy_fd_set(&efds, exceptfds);
+	}
+
+	/* construct time value */
+	struct timeval tv;
+	struct timeval *tvp = &tv;
+
+	if (timeout.type == EM_VALUE_TYPE_FLOAT) {
+
+		tv.tv_sec = (time_t)timeout.value.te_floattype;
+		tv.tv_usec = (long)(timeout.value.te_floattype * 1000000.f) % 1000000;
+	}
+	else if (timeout.type == EM_VALUE_TYPE_INT) {
+
+		tv.tv_sec = (time_t)timeout.value.te_inttype;
+		tv.tv_usec = 0;
+	}
+	else tvp = NULL;
+
+	if (select((int)nfds, rfdsp, wfdsp, efdsp, tvp) < 0)
+		return EM_VALUE_INT(-1);
+
+	/* set fds */
+	if (rfdsp) copy_fd_array(readfds, &rfds);
+	if (wfdsp) copy_fd_array(writefds, &wfds);
+	if (efdsp) copy_fd_array(exceptfds, &efds);
+
+	return EM_VALUE_INT(0);
 }
 
 /* tcgetattr */
@@ -174,6 +262,8 @@ static em_result_t initialize(em_context_t *context, em_value_t map) {
 
 	SET_FUNCTION(mod, read);
 	SET_FUNCTION(mod, write);
+
+	SET_FUNCTION(mod, select);
 
 	/* termios functions */
 	SET_FUNCTION(mod, tcgetattr);

@@ -19,6 +19,10 @@
  * The '*' character works like a regex zero or more
  * repeat, and should if necessary follow the last
  * token.
+ *
+ * The '~' character comes before a format character
+ * and indicates that 'none' is a valid value. This
+ * rule does not apply when followed by 'i' or 'f'.
  */
 #ifndef EMERALD_UTIL_H
 #define EMERALD_UTIL_H

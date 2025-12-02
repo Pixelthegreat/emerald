@@ -583,7 +583,7 @@ EM_API em_node_t *em_parser_factor(em_parser_t *parser) {
 			block = em_node_new(EM_NODE_TYPE_BLOCK, &parser->token->pos);
 			em_node_add_child(node, block);
 
-			while (!is_token_in(parser->token, pairs+1, EM_TOKEN_PAIR_COUNT(pairs)-1)) {
+			while (!is_token_in(parser->token, pairs, EM_TOKEN_PAIR_COUNT(pairs))) {
 
 				em_node_t *statement = em_parser_statement(parser);
 				if (!statement) { EM_NODE_DECREF(node); return NULL; }

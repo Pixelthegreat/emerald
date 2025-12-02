@@ -12,6 +12,7 @@
 #include <emerald/string.h>
 #include <emerald/list.h>
 #include <emerald/class.h>
+#include <emerald/none.h>
 #include <emerald/module/array.h>
 #include <emerald/util.h>
 
@@ -63,18 +64,30 @@ EM_API em_result_t em_util_parse_vargs(em_pos_t *pos, em_value_t *args, size_t n
 	char c = 0;
 	char rc = 0; /* repeat character */
 	void *pointer = NULL; /* argument pointer */
+	em_bool_t optional = EM_FALSE;
 
 	while (*format && i < nargs) {
 
 		if (rc || *format == '*')
 			rc = c;
+		else if (*format == '~') {
+
+			format++;
+			optional = EM_TRUE;
+			continue;
+		}
 		else {
 			
 			c = *format++;
 			pointer = va_arg(vargs, void *);
 		}
-
 		em_value_t arg = args[i++];
+
+		em_bool_t none_rule = EM_TRUE;
+		if (optional && em_value_is(em_none, arg))
+			none_rule = EM_FALSE;
+		optional = EM_FALSE;
+
 		switch (c) {
 
 			/* any value */
@@ -87,7 +100,8 @@ EM_API em_result_t em_util_parse_vargs(em_pos_t *pos, em_value_t *args, size_t n
 
 			/* number */
 			case 'n':
-				if (arg.type != EM_VALUE_TYPE_INT &&
+				if (none_rule &&
+				    arg.type != EM_VALUE_TYPE_INT &&
 				    arg.type != EM_VALUE_TYPE_FLOAT)
 					INVALID_ARGUMENTS;
 				if (rc) break;
@@ -118,7 +132,8 @@ EM_API em_result_t em_util_parse_vargs(em_pos_t *pos, em_value_t *args, size_t n
 
 			/* object */
 			case 'o':
-				if (arg.type != EM_VALUE_TYPE_OBJECT)
+				if (none_rule &&
+				    arg.type != EM_VALUE_TYPE_OBJECT)
 					INVALID_ARGUMENTS;
 				if (rc) break;
 
@@ -128,7 +143,8 @@ EM_API em_result_t em_util_parse_vargs(em_pos_t *pos, em_value_t *args, size_t n
 
 			/* wide string object */
 			case 'w':
-				if (!em_is_string(arg))
+				if (none_rule &&
+				    !em_is_string(arg))
 					INVALID_ARGUMENTS;
 				if (rc) break;
 
@@ -148,7 +164,8 @@ EM_API em_result_t em_util_parse_vargs(em_pos_t *pos, em_value_t *args, size_t n
 
 			/* list */
 			case 'l':
-				if (!em_is_list(arg))
+				if (none_rule &&
+				    !em_is_list(arg))
 					INVALID_ARGUMENTS;
 				if (rc) break;
 
@@ -158,7 +175,8 @@ EM_API em_result_t em_util_parse_vargs(em_pos_t *pos, em_value_t *args, size_t n
 
 			/* map */
 			case 'm':
-				if (!em_is_map(arg))
+				if (none_rule &&
+				    !em_is_map(arg))
 					INVALID_ARGUMENTS;
 				if (rc) break;
 
@@ -168,7 +186,8 @@ EM_API em_result_t em_util_parse_vargs(em_pos_t *pos, em_value_t *args, size_t n
 
 			/* byte array */
 			case 'b':
-				if (!em_is_byte_array(arg))
+				if (none_rule &&
+				    !em_is_byte_array(arg))
 					INVALID_ARGUMENTS;
 				if (rc) break;
 

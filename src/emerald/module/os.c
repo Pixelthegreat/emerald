@@ -26,6 +26,7 @@
 #include <ec.h>
 #else
 #include <time.h>
+#include <sys/stat.h>
 #endif
 
 /* file info */
@@ -89,6 +90,28 @@ static em_value_t os_sleep(em_context_t *context, em_value_t *args, size_t nargs
 	nanosleep(&ts, NULL);
 #endif
 	return em_none;
+}
+
+/* check if file exists */
+static em_value_t os_exists(em_context_t *context, em_value_t *args, size_t nargs, em_pos_t *pos) {
+
+	const em_wchar_t *path;
+
+	if (em_util_parse_args(pos, args, nargs, "W", &path) != EM_RESULT_SUCCESS)
+		return EM_VALUE_FAIL;
+
+	em_wpath_fix(pathbuf, PATHBUFSZ, path);
+
+#if defined _WIN32 || _WIN64
+
+#elif defined _ECLAIR
+
+#else
+	struct stat st;
+	if (stat(pathbuf, &st) < 0)
+		return EM_VALUE_FALSE;
+	return EM_VALUE_TRUE;
+#endif
 }
 
 /* open file */
@@ -366,6 +389,7 @@ static em_result_t initialize(em_context_t *context, em_value_t map) {
 
 	/* functions */
 	em_util_set_function(mod, "sleep", os_sleep);
+	em_util_set_function(mod, "exists", os_exists);
 
 	em_util_set_function(mod, "openFile", os_openFile);
 	em_util_set_function(mod, "readFile", os_readFile);

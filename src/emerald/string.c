@@ -98,8 +98,7 @@ static em_value_t compare_equal(em_value_t a, em_value_t b, em_pos_t *pos) {
 	em_string_t *first = EM_STRING(EM_OBJECT_FROM_VALUE(a));
 	em_string_t *second = EM_STRING(EM_OBJECT_FROM_VALUE(b));
 
-	if (first->length != second->length ||
-	    first->hash != second->hash)
+	if (first->length != second->length)
 		return EM_VALUE_FALSE;
 
 	return !memcmp(first->data, second->data, first->length)? EM_VALUE_TRUE: EM_VALUE_FALSE;

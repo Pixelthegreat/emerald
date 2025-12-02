@@ -13,6 +13,7 @@ em_modules = {
 	'os',
 	'site',
 	'string',
+	'utf8',
 }
 
 if _TARGET_OS == 'windows' then

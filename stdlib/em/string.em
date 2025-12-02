@@ -29,3 +29,14 @@ let string.justifyCenter = func(s, c, w) then
 	end
 	return c * ((w - lengthOf(s)) / 2) + s
 end
+
+# String contains character #
+let string.containsCharacter = func(s, c) then
+
+	foreach i in s then
+		if c == i then
+			return true
+		end
+	end
+	return false
+end
