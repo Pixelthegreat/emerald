@@ -1,6 +1,10 @@
-#                        #
-# Argument parser module #
-#                        #
+#
+# Copyright 2026, Elliot Kohlmyer
+#
+# SPDX-License-Identifier: BSD-3-Clause
+#
+# Argument parser module
+#
 include 'em/string.em'
 
 let argparse = {}

@@ -1,6 +1,10 @@
-#                               #
-# Posix module stub and helpers #
-#                               #
+#
+# Copyright 2026, Elliot Kohlmyer
+#
+# SPDX-License-Identifier: BSD-3-Clause
+#
+# Posix module stub and helpers
+#
 include 'em/array.em'
 
 let posix = __module_posix

@@ -1,3 +1,8 @@
+/*
+ * Copyright 2026, Elliot Kohlmyer
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
 #ifndef SHELL_APPLICATION_H
 #define SHELL_APPLICATION_H
 
