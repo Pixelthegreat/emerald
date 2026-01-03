@@ -21,6 +21,12 @@
 #include <emerald/class.h>
 #include <emerald/context.h>
 
+#define PATH_ENV_MAX 8
+#define PATH_ENV_SIZE 4096
+
+static char path_env[PATH_ENV_MAX][PATH_ENV_SIZE];
+static size_t path_env_count;
+
 /* visitors */
 static em_value_t (*visitors[EM_NODE_TYPE_COUNT])(em_context_t *, em_node_t *) = {
 	[EM_NODE_TYPE_BLOCK] = em_context_visit_block,
@@ -96,6 +102,25 @@ EM_API em_result_t em_context_init(em_context_t *context, const char **argv) {
 
 	const char *stdlib_path = getenv("EM_PATH");
 	if (stdlib_path) context->dirstack[context->ndirstack++] = stdlib_path;
+
+	const char *path = getenv("EM_PATH");
+	const char *end = path;
+
+	while (end && path_env_count < PATH_ENV_MAX &&
+	       context->ndirstack < EM_CONTEXT_MAX_DIRS) {
+
+		end = strchr(path, ':');
+		size_t len = end? (size_t)(end - path): strlen(path);
+
+		char *pathbuf = path_env[path_env_count++];
+		size_t real = len < PATH_ENV_SIZE-1? len: PATH_ENV_SIZE-1;
+
+		memcpy(pathbuf, path, real);
+		pathbuf[real] = 0;
+
+		path += len+1;
+		context->dirstack[context->ndirstack++] = pathbuf;
+	}
 
 	context->nscopestack = 1;
 	context->scopestack[0] = em_map_new();

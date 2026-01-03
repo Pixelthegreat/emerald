@@ -116,7 +116,7 @@ static void *track_realloc(void *p, size_t size) {
 
 	if (em_print_allocation_traffic)
 		em_log_info("realloc(%p, %zu) = %p :%s:%ld", oldp, size, p, blk->list->path, blk->line);
-	return (void *)p + sizeof(struct mblk);
+	return (void *)blk + sizeof(struct mblk);
 }
 
 /* track free */

@@ -93,7 +93,7 @@ EM_API em_value_t em_list_new(size_t nbase) {
 	EM_REFOBJ(list)->free = list_free;
 
 	list->nitems = 0;
-	list->nbase = 0;
+	list->nbase = nbase;
 	list->ext = NULL;
 	list->next = 0;
 	list->cext = 0;
