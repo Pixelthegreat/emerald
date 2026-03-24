@@ -8,6 +8,7 @@
  * Format guide for em_util_parse_args:
  *   - v: any value
  *   - n: number
+ *   - N: number value converted to floating point
  *   - i: integer value
  *   - f: floating point value
  *   - o: object
@@ -22,7 +23,8 @@
  *
  * The '~' character comes before a format character
  * and indicates that 'none' is a valid value. This
- * rule does not apply when followed by 'i' or 'f'.
+ * rule does not apply when followed by 'i', 'f' or
+ * 'N'.
  */
 #ifndef EMERALD_UTIL_H
 #define EMERALD_UTIL_H

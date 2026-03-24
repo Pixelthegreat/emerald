@@ -563,13 +563,21 @@ EM_API em_value_t em_value_compare_greater_than(em_value_t a, em_value_t b, em_p
 /* or truthiness of values */
 EM_API em_value_t em_value_compare_or(em_value_t a, em_value_t b, em_pos_t *pos) {
 
-	return EM_VALUE_INT(ops[a.type].is_true(a, pos).value.te_inttype || ops[b.type].is_true(b, pos).value.te_inttype);
+	if (ops[a.type].is_true(a, pos).value.te_inttype)
+		return EM_VALUE_TRUE;
+	if (ops[b.type].is_true(b, pos).value.te_inttype)
+		return EM_VALUE_TRUE;
+	return EM_VALUE_FALSE;
 }
 
 /* and truthiness of values */
 EM_API em_value_t em_value_compare_and(em_value_t a, em_value_t b, em_pos_t *pos) {
 
-	return EM_VALUE_INT(ops[a.type].is_true(a, pos).value.te_inttype && ops[b.type].is_true(b, pos).value.te_inttype);
+	if (!ops[a.type].is_true(a, pos).value.te_inttype)
+		return EM_VALUE_FALSE;
+	if (!ops[b.type].is_true(b, pos).value.te_inttype)
+		return EM_VALUE_FALSE;
+	return EM_VALUE_TRUE;
 }
 
 /* get hash value */

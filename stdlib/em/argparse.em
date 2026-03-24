@@ -195,18 +195,18 @@ let argparse.parseArguments = func(argv, c) then
 			if not count then
 
 				let index = index + 1
-				if index >= lengthOf(context.arguments) then
+				if index >= lengthOf(c.arguments) then
 
 					argparse._printErrorAndExit(c, string.format('Unexpected argument \'{}\'', arg))
 				end
 
-				let argument = context.arguments[index]
+				let argument = c.arguments[index]
 
 				let count = argument.count
 				let table[argument.name] = []
 			end
 
-			let argument = context.arguments[index]
+			let argument = c.arguments[index]
 			append(table[argument.name], arg)
 
 			if count >= 0 then let count = count - 1 end
@@ -214,9 +214,9 @@ let argparse.parseArguments = func(argv, c) then
 	end
 
 	# Insufficient arguments #
-	if count >= 0 and (count or index < lengthOf(context.arguments)-1) then
+	if count >= 0 and (count or index < lengthOf(c.arguments)-1) then
 
-		if index == lengthOf(context.arguments)-2 and context.arguments[index+1].count < 0 then
+		if index == lengthOf(c.arguments)-2 and c.arguments[index+1].count < 0 then
 			return table
 		end
 		argparse._printErrorAndExit(c, 'Insufficient arguments')

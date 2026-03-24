@@ -110,6 +110,22 @@ EM_API em_result_t em_util_parse_vargs(em_pos_t *pos, em_value_t *args, size_t n
 				if (pnumber) *pnumber = arg;
 				break;
 
+			/* number converted to floating point */
+			case 'N':
+				if (arg.type != EM_VALUE_TYPE_INT &&
+				    arg.type != EM_VALUE_TYPE_FLOAT)
+					INVALID_ARGUMENTS;
+				if (rc) break;
+
+				em_floattype_t *pintfloat = (em_floattype_t *)pointer;
+				if (pintfloat) {
+					if (arg.type == EM_VALUE_TYPE_INT)
+						*pintfloat = (em_floattype_t)
+							arg.value.te_inttype;
+					else *pintfloat = arg.value.te_floattype;
+				}
+				break;
+
 			/* integer */
 			case 'i':
 				if (arg.type != EM_VALUE_TYPE_INT)

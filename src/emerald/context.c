@@ -542,11 +542,16 @@ EM_API em_value_t em_context_visit_binary_operation(em_context_t *context, em_no
 	em_value_t left = em_context_visit(context, left_node);
 	if (!EM_VALUE_OK(left)) return EM_VALUE_FAIL;
 
-	em_value_t right = em_context_visit(context, right_node);
-	if (!EM_VALUE_OK(right)) {
+	/* special case to not evaluate value for and and or */
+	em_value_t right = EM_VALUE_FAIL;
+	if (!!strcmp(token->value, "and") && !!strcmp(token->value, "or")) {
 
-		em_value_delete(left);
-		return EM_VALUE_FAIL;
+		right = em_context_visit(context, right_node);
+		if (!EM_VALUE_OK(right)) {
+
+			em_value_delete(left);
+			return EM_VALUE_FAIL;
+		}
 	}
 
 	/* operation */
@@ -597,11 +602,26 @@ EM_API em_value_t em_context_visit_binary_operation(em_context_t *context, em_no
 	else if (token->type == EM_TOKEN_TYPE_GREATER_THAN_EQUALS)
 		result = EM_VALUE_INT_INV(em_value_compare_less_than(left, right, &node->pos));
 
-	else if (!strcmp(token->value, "or"))
-		result = em_value_compare_or(left, right, &node->pos);
+	/* special case to not evaluate value for and and or */
+	else if (!strcmp(token->value, "or")) {
 
-	else if (!strcmp(token->value, "and"))
-		result = em_value_compare_and(left, right, &node->pos);
+		result = em_value_is_true(left, &node->pos);
+		if (!result.value.te_inttype) {
+
+			result = em_context_visit(context, right_node);
+			if (EM_VALUE_OK(result)) result = em_value_is_true(result, &node->pos);
+		}
+	}
+
+	else if (!strcmp(token->value, "and")) {
+
+		result = em_value_is_true(left, &node->pos);
+		if (result.value.te_inttype) {
+
+			result = em_context_visit(context, right_node);
+			if (EM_VALUE_OK(result)) result = em_value_is_true(result, &node->pos);
+		}
+	}
 
 	else {
 		em_log_runtime_error(&node->pos, "Unsupported operation ('%s')", token->value);

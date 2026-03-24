@@ -101,7 +101,7 @@ static em_value_t compare_equal(em_value_t a, em_value_t b, em_pos_t *pos) {
 	if (first->length != second->length)
 		return EM_VALUE_FALSE;
 
-	return !memcmp(first->data, second->data, first->length)? EM_VALUE_TRUE: EM_VALUE_FALSE;
+	return !memcmp(first->data, second->data, first->length * sizeof(em_wchar_t))? EM_VALUE_TRUE: EM_VALUE_FALSE;
 }
 
 /* get hash value */
