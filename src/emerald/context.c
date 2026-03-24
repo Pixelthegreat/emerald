@@ -400,7 +400,7 @@ EM_API em_value_t em_context_visit_int(em_context_t *context, em_node_t *node) {
 
 	em_token_t *token = em_node_get_token(node, 0);
 
-	em_inttype_t value;
+	em_inttype_t value = 0;
 
 	const char *string = token->value;
 	for (; *string >= '0' && *string <= '9'; string++)
