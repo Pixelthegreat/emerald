@@ -20,9 +20,9 @@
 #include <emerald/module/array.h>
 #include <emerald/module/os.h>
 
-#if defined _WIN32 || _WIN64
+#if defined EM_WINDOWS
 #include <windows.h>
-#elif defined _ECLAIR
+#elif defined EM_ECLAIR
 #include <ec.h>
 #else
 #include <time.h>
@@ -57,9 +57,9 @@ em_module_t em_module_os = {
 	.destroy = destroy,
 };
 
-#if defined _WIN32 || _WIN64
+#if defined EM_WINDOWS
 #define OS_NAME "windows"
-#elif defined _ECLAIR
+#elif defined EM_ECLAIR
 #define OS_NAME "eclair-os"
 #else
 #define OS_NAME "posix"
@@ -73,10 +73,22 @@ static em_value_t os_sleep(em_context_t *context, em_value_t *args, size_t nargs
 	if (em_util_parse_args(pos, args, nargs, "n", &value) != EM_RESULT_SUCCESS)
 		return EM_VALUE_FAIL;
 
-#if defined _WIN32 || _WIN64
+#if defined EM_WINDOWS
 
-#elif defined _ECLAIR
+#elif defined EM_ECLAIR
+	if (value.type != EM_VALUE_TYPE_INT) {
 
+		em_log_runtime_error(pos, "Invalid arguments");
+		return EM_VALUE_FAIL;
+	}
+
+	uint64_t ns = (uint64_t)value.value.te_inttype * 1000000000;
+
+	ec_timeval_t tv = {
+		.sec = ns / 1000000000,
+		.nsec = ns % 1000000000,
+	};
+	ec_sleepns(&tv);
 #else
 	long ns = 0;
 	if (value.type == EM_VALUE_TYPE_INT)
@@ -102,10 +114,13 @@ static em_value_t os_exists(em_context_t *context, em_value_t *args, size_t narg
 
 	em_wpath_fix(pathbuf, PATHBUFSZ, path);
 
-#if defined _WIN32 || _WIN64
+#if defined EM_WINDOWS
 
-#elif defined _ECLAIR
-
+#elif defined EM_ECLAIR
+	ec_stat_t st;
+	if (ec_stat(pathbuf, &st) < 0)
+		return EM_VALUE_FALSE;
+	return EM_VALUE_TRUE;
 #else
 	struct stat st;
 	if (stat(pathbuf, &st) < 0)

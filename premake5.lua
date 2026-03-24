@@ -1,13 +1,45 @@
 workspace 'emerald'
 	configurations {'debug', 'release'}
 
+-- Split string --
+function split(str, delim)
+	local result = {}
+	local pattern = '([^' .. delim .. ']+)'
+	for match in string.gmatch(str, pattern) do
+		table.insert(result, match)
+	end
+	return result
+end
+
+-- Index of value in table --
+function index_value(table, value)
+	for i, v in ipairs(table) do
+		if v == value then
+			return i
+		end
+	end
+	return -1
+end
+
 -- Options --
 newoption {
 	trigger = 'enable-asan',
 	description = 'Enable address sanitization',
 }
 
--- Global configuration --
+newoption {
+	trigger = 'enable-modules',
+	value = 'MODULE1,MODULE2,...',
+	description = 'Enable specific modules only (default is all)',
+}
+
+newoption {
+	trigger = 'disable-modules',
+	value = 'MODULE1,MODULE2,...',
+	description = 'Disable specific modules',
+}
+
+-- Determine module list --
 em_modules = {
 	'array',
 	'os',
@@ -22,6 +54,21 @@ else
 	table.insert(em_modules, 'posix')
 end
 
+if _OPTIONS['enable-modules'] then
+	em_modules = split(_OPTIONS['enable-modules'], ',')
+end
+
+if _OPTIONS['disable-modules'] then
+	for _, module in ipairs(split(_OPTIONS['disable-modules'], ',')) do
+
+		index = index_value(em_modules, module)
+		if index >= 0 then
+			table.remove(em_modules, index)
+		end
+	end
+end
+
+-- Global configuration --
 language 'C'
 cdialect 'C99'
 includedirs {'include'}

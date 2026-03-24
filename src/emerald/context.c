@@ -401,7 +401,10 @@ EM_API em_value_t em_context_visit_int(em_context_t *context, em_node_t *node) {
 	em_token_t *token = em_node_get_token(node, 0);
 
 	em_inttype_t value;
-	sscanf(token->value, EM_INTTYPE_FORMAT, &value);
+
+	const char *string = token->value;
+	for (; *string >= '0' && *string <= '9'; string++)
+		value = (value * 10) + (em_inttype_t)(*string - '0');
 
 	return EM_VALUE_INT(value);
 }
@@ -412,7 +415,12 @@ EM_API em_value_t em_context_visit_float(em_context_t *context, em_node_t *node)
 	em_token_t *token = em_node_get_token(node, 0);
 
 	em_floattype_t value;
+#ifndef _ECLAIR
 	sscanf(token->value, EM_FLOATTYPE_FORMAT, &value);
+#else
+	em_log_runtime_error(&node->pos, "Unsupported on platform"); /* TODO: Add Eclair OS support for floats */
+	return EM_VALUE_FAIL;
+#endif
 
 	return EM_VALUE_FLOAT(value);
 }

@@ -20,6 +20,11 @@
  #define EM_WINDOWS
 #else
  #define EM_API extern
+ #ifdef _ECLAIR
+  #define EM_ECLAIR
+ #else
+  #define EM_UNIX
+ #endif
 #endif
 
 #ifdef DEBUG
