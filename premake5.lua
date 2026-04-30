@@ -42,6 +42,7 @@ newoption {
 -- Determine module list --
 em_modules = {
 	'array',
+	'math',
 	'os',
 	'site',
 	'string',

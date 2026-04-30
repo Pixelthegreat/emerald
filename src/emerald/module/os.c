@@ -398,9 +398,9 @@ static em_result_t initialize(em_context_t *context, em_value_t map) {
 	em_util_set_value(mod, "write", EM_VALUE_INT(FLAG_WRITE));
 	em_util_set_value(mod, "binary", EM_VALUE_INT(FLAG_BINARY));
 
-	em_util_set_value(mod, "start", EM_VALUE_INT(WHENCE_START));
-	em_util_set_value(mod, "cursor", EM_VALUE_INT(WHENCE_CURSOR));
-	em_util_set_value(mod, "end", EM_VALUE_INT(WHENCE_END));
+	em_util_set_value(mod, "atStart", EM_VALUE_INT(WHENCE_START));
+	em_util_set_value(mod, "atCursor", EM_VALUE_INT(WHENCE_CURSOR));
+	em_util_set_value(mod, "atEnd", EM_VALUE_INT(WHENCE_END));
 
 	/* functions */
 	em_util_set_function(mod, "sleep", os_sleep);

@@ -113,7 +113,7 @@ EM_API em_result_t em_lexer_make_tokens(em_lexer_t *lexer) {
 	while (lexer->pos.cc) {
 
 		/* whitespace */
-		if (strchr(" \t\n", lexer->pos.cc))
+		if (strchr(" \t\r\n", lexer->pos.cc))
 			em_pos_advance(&lexer->pos);
 
 		/* comment */
@@ -441,15 +441,20 @@ EM_API em_result_t em_lexer_make_identifier(em_lexer_t *lexer) {
 	}
 
 	em_token_t *token;
+	em_token_t *last = lexer->last;
+
 	if (!(token = em_lexer_add_token_full(lexer, EM_TOKEN_TYPE_IDENTIFIER, &pos, pos.text+pos.index, len)))
 		return EM_RESULT_FAILURE;
 
 	/* identify a keyword */
-	for (int i = 0; i < N_KEYWORDS; i++) {
-		if (!strcmp(keywords[i], token->value)) {
+	if (!last || last->type != EM_TOKEN_TYPE_DOT) {
 
-			token->type = EM_TOKEN_TYPE_KEYWORD;
-			break;
+		for (int i = 0; i < N_KEYWORDS; i++) {
+			if (!strcmp(keywords[i], token->value)) {
+
+				token->type = EM_TOKEN_TYPE_KEYWORD;
+				break;
+			}
 		}
 	}
 	return EM_RESULT_SUCCESS;

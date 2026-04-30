@@ -10,6 +10,8 @@
 
 #include <emerald/core.h>
 
+EM_API em_bool_t em_track_allocations;
+
 /* functions */
 EM_API void *em_allocate(size_t size, const char *file, em_ssize_t line); /* allocate memory */
 EM_API void *em_realloc(void *p, size_t size); /* reallocate memory */
