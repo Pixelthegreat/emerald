@@ -210,7 +210,7 @@ EM_API em_refobj_t *em_refobj_incref(em_refobj_t *obj) {
 /* decrease reference count */
 EM_API void em_refobj_decref(em_refobj_t *obj) {
 
-	if (!obj || !obj->refcnt || obj->list->nlock <= 0) return;
+	if (!obj || !obj->refcnt || obj->list->nlock < 0) return;
 
 	if (!--obj->refcnt) {
 
@@ -223,7 +223,7 @@ EM_API void em_refobj_decref(em_refobj_t *obj) {
 /* decrease reference count without freeing */
 EM_API void em_refobj_decref_no_free(em_refobj_t *obj) {
 
-	if (!obj || !obj->refcnt || obj->list->nlock <= 0) return;
+	if (!obj || !obj->refcnt || obj->list->nlock < 0) return;
 
 	obj->refcnt--;
 }

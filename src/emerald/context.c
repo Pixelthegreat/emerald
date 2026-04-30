@@ -124,6 +124,10 @@ EM_API em_result_t em_context_init(em_context_t *context, const char **argv) {
 
 	context->nscopestack = 1;
 	context->scopestack[0] = em_map_new();
+
+	for (size_t i = 1; i < EM_CONTEXT_MAX_SCOPE; i++)
+		context->scopestack[i] = EM_VALUE_FAIL;
+
 	em_value_incref(context->scopestack[0]);
 	context->rec_first = NULL;
 	context->rec_last = NULL;
@@ -202,7 +206,7 @@ EM_API const char *em_context_resolve(em_context_t *context, const char *path) {
 
 		if (em_path_join(pathbuf1, PATHBUFSZ, 2, context->dirstack[i], path) != EM_RESULT_SUCCESS)
 			return NULL;
-		
+
 		if (em_path_exists(pathbuf1)) {
 
 			if (em_path_fix(pathbuf2, PATHBUFSZ, pathbuf1) != EM_RESULT_SUCCESS)
@@ -240,10 +244,14 @@ EM_API em_result_t em_context_push_scope(em_context_t *context) {
 		return EM_RESULT_FAILURE;
 	}
 
-	em_value_t map = em_map_new();
-	em_value_incref(map);
+	size_t index = context->nscopestack++;
+	if (!EM_VALUE_OK(context->scopestack[index])) {
 
-	context->scopestack[context->nscopestack++] = map;
+		em_value_t map = em_map_new();
+		em_value_incref(map);
+
+		context->scopestack[index] = map;
+	}
 	return EM_RESULT_SUCCESS;
 }
 
@@ -260,7 +268,7 @@ EM_API void em_context_pop_scope(em_context_t *context) {
 	}
 
 	em_value_t map = context->scopestack[--context->nscopestack];
-	em_value_decref(map);
+	em_map_soft_reset(map);
 }
 
 /* set value in current scope */
@@ -1209,7 +1217,9 @@ EM_API em_value_t em_context_visit_class(em_context_t *context, em_node_t *node)
 		return EM_VALUE_FAIL;
 	}
 
-	em_value_t class = em_class_new(node, name_token->value, base, context->scopestack[context->nscopestack-1]);
+	em_value_t map = em_map_copy(context->scopestack[context->nscopestack-1]);
+	em_value_t class = em_class_new(node, name_token->value, base, map);
+
 	em_context_pop_scope(context);
 
 	/* set value */
@@ -1276,7 +1286,7 @@ EM_API em_value_t em_context_visit_puts(em_context_t *context, em_node_t *node) 
 		em_wchar_write(stdout, strobject->data, strobject->length);
 		if (cur->next) fprintf(stdout, " ");
 
-		if (result.type != string.type || result.value.t_voidp != string.value.t_voidp)
+		if (!em_value_is(result, string))
 			em_value_delete(string);
 		cur = cur->next;
 	}
@@ -1289,7 +1299,7 @@ EM_API void em_context_destroy(em_context_t *context) {
 
 	if (!context || !context->init) return;
 
-	for (size_t i = 0; i < context->nscopestack; i++)
+	for (size_t i = 0; i < EM_CONTEXT_MAX_SCOPE; i++)
 		em_value_decref(context->scopestack[i]);
 
 	em_recfile_t *recfile = context->rec_first;

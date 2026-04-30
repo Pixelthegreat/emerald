@@ -39,6 +39,7 @@ enum {
 	OPT_NO_EXIT_FREE_BIT = 0x10000,
 	OPT_NO_PRINT_ALLOCS_BIT = 0x20000,
 	OPT_PRINT_ALLOC_TRAFFIC_BIT = 0x40000,
+	OPT_NO_ALLOC_TRACKING_BIT = 0x80000,
 };
 static int opt_flags = 0;
 static const char *arg_filename = NULL;
@@ -81,6 +82,10 @@ static em_result_t parse_args(int argc, const char **argv) {
 			/* print allocation traffic (mallocs, reallocs and frees) */
 			else if (!strcmp(arg, "--print-alloc-traffic"))
 				opt_flags |= OPT_PRINT_ALLOC_TRAFFIC_BIT;
+
+			/* disable allocation tracking entirely */
+			else if (!strcmp(arg, "--no-alloc-tracking"))
+				opt_flags |= OPT_NO_ALLOC_TRACKING_BIT;
 
 			/* unrecognized */
 			else {
@@ -190,6 +195,8 @@ EM_API em_result_t shell_application_run(int argc, const char **argv) {
 		init_flags |= EM_INIT_FLAG_NO_PRINT_ALLOCS;
 	if (opt_flags & OPT_PRINT_ALLOC_TRAFFIC_BIT)
 		init_flags |= EM_INIT_FLAG_PRINT_ALLOC_TRAFFIC;
+	if (opt_flags & OPT_NO_ALLOC_TRACKING_BIT)
+		em_track_allocations = EM_FALSE;
 
 	if (em_init(init_flags) != EM_RESULT_SUCCESS)
 		return EM_RESULT_FAILURE;

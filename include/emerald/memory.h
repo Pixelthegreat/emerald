@@ -11,6 +11,7 @@
 #include <emerald/core.h>
 
 EM_API em_bool_t em_track_allocations;
+EM_API size_t em_memory_usage; /* valid only with allocation tracking */
 
 /* functions */
 EM_API void *em_allocate(size_t size, const char *file, em_ssize_t line); /* allocate memory */

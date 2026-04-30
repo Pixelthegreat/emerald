@@ -99,7 +99,11 @@ static em_value_t class_call(em_context_t *context, em_value_t v, em_value_t *ar
 		memcpy(newargs+1, args, nargs * sizeof(em_value_t));
 
 		em_value_incref(v);
+		em_value_incref(instance);
+
 		em_value_t result = em_value_call(context, call, newargs, nargs+1, pos);
+
+		em_value_decref_no_free(instance);
 		em_value_decref_no_free(v);
 
 		if (!EM_VALUE_OK(result)) {

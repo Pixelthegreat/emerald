@@ -20,6 +20,8 @@ em_bool_t em_track_allocations = EM_FALSE;
 
 em_bool_t em_print_allocation_traffic = EM_FALSE;
 
+size_t em_memory_usage;
+
 static size_t nalloc; /* current number of allocations */
 static size_t ntotal; /* total number of allocations */
 
@@ -79,6 +81,8 @@ static void *track_alloc(size_t size, const char *file, em_ssize_t line) {
 	struct mblk *blk = (struct mblk *)malloc(sizeof(struct mblk) + size);
 	if (!blk) return NULL;
 
+	em_memory_usage += size;
+
 	blk->list = list;
 	blk->line = line;
 	blk->next = NULL;
@@ -106,7 +110,9 @@ static void *track_realloc(void *p, size_t size) {
 	blk = realloc(blk, sizeof(struct mblk) + size);
 	if (!blk) return NULL;
 
+	em_memory_usage -= blk->size;
 	blk->size = size;
+	em_memory_usage += size;
 
 	/* update links */
 	if (blk->prev) blk->prev->next = blk;
@@ -133,6 +139,8 @@ static void track_free(void *p) {
 
 	struct mlist *list = blk->list;
 	em_ssize_t line = blk->line;
+
+	em_memory_usage -= blk->size;
 	free(blk);
 
 	if (em_print_allocation_traffic)
@@ -188,7 +196,7 @@ EM_API void em_print_allocs(void) {
 
 			struct mblk *next = blk->next;
 
-			em_log_warning("Unresolved allocation in file '%s' at line %ld (%zu bytes)", list->path, blk->line, blk->size);
+			em_log_warning("Unresolved allocation %p in file '%s' at line %ld (%zu bytes)", blk+1, list->path, blk->line, blk->size);
 
 			free(blk);
 			blk = next;

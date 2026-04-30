@@ -121,7 +121,7 @@ EM_API void em_map_set(em_value_t object, em_hash_t key, em_value_t value) {
 	em_map_entry_t *entry = map->first;
 	while (entry) {
 
-		if (entry->key == key)
+		if (entry->key == key || !EM_VALUE_OK(entry->value))
 			break;
 		entry = entry->next;
 	}
@@ -141,7 +141,8 @@ EM_API void em_map_set(em_value_t object, em_hash_t key, em_value_t value) {
 	if (em_value_is(entry->value, value))
 		return;
 
-	if (EM_VALUE_OK(entry->value)) em_value_decref(entry->value);
+	em_value_decref(entry->value);
+	entry->key = key;
 	entry->value = value;
 	em_value_incref(value);
 }
@@ -154,11 +155,42 @@ EM_API em_value_t em_map_get(em_value_t object, em_hash_t key) {
 	em_map_entry_t *entry = map->first;
 	while (entry) {
 
-		if (entry->key == key)
+		if (entry->key == key && EM_VALUE_OK(entry->value))
 			return entry->value;
 		entry = entry->next;
 	}
 	return EM_VALUE_FAIL;
+}
+
+/* reset map without freeing all of its resources */
+EM_API void em_map_soft_reset(em_value_t object) {
+
+	em_map_t *map = EM_MAP(EM_OBJECT_FROM_VALUE(object));
+
+	em_map_entry_t *entry = map->first;
+	while (entry) {
+
+		em_value_decref(entry->value);
+		entry->key = 0;
+		entry->value = EM_VALUE_FAIL;
+		entry = entry->next;
+	}
+}
+
+/* copy map */
+EM_API em_value_t em_map_copy(em_value_t object) {
+
+	em_map_t *map = EM_MAP(EM_OBJECT_FROM_VALUE(object));
+
+	em_value_t new = em_map_new();
+
+	em_map_entry_t *entry = map->first;
+	while (entry) {
+
+		em_map_set(new, entry->key, entry->value);
+		entry = entry->next;
+	}
+	return new;
 }
 
 /* determine if value is map */

@@ -10,6 +10,7 @@
 #include <string.h>
 #include <errno.h>
 #include <emerald/core.h>
+#include <emerald/memory.h>
 #include <emerald/none.h>
 #include <emerald/util.h>
 #include <emerald/wchar.h>
@@ -381,6 +382,17 @@ static em_value_t os_closeFile(em_context_t *context, em_value_t *args, size_t n
 	return em_none;
 }
 
+/* get tracked memory usage */
+static em_value_t os_getTrackedMemoryUsage(em_context_t *context, em_value_t *args, size_t nargs, em_pos_t *pos) {
+
+	if (nargs) {
+
+		em_log_runtime_error(pos, "Invalid arguments");
+		return EM_VALUE_FAIL;
+	}
+	return EM_VALUE_INT((em_inttype_t)em_memory_usage);
+}
+
 /* initialize module */
 static em_result_t initialize(em_context_t *context, em_value_t map) {
 
@@ -411,6 +423,8 @@ static em_result_t initialize(em_context_t *context, em_value_t map) {
 	em_util_set_function(mod, "writeFile", os_writeFile);
 	em_util_set_function(mod, "seekFile", os_seekFile);
 	em_util_set_function(mod, "closeFile", os_closeFile);
+
+	em_util_set_function(mod, "getTrackedMemoryUsage", os_getTrackedMemoryUsage);
 
 	return EM_RESULT_SUCCESS;
 }
