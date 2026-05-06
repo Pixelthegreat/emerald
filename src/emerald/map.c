@@ -156,10 +156,26 @@ EM_API em_value_t em_map_get(em_value_t object, em_hash_t key) {
 	while (entry) {
 
 		if (entry->key == key && EM_VALUE_OK(entry->value))
-			return entry->value;
+			break;
 		entry = entry->next;
 	}
-	return EM_VALUE_FAIL;
+	if (!entry) return EM_VALUE_FAIL;
+
+	/* move entry to front */
+	if (entry != map->first) {
+
+		if (entry == map->last)
+			map->last = entry->previous;
+		if (entry->previous) entry->previous->next = entry->next;
+		if (entry->next) entry->next->previous = entry->previous;
+
+		entry->previous = NULL;
+		entry->next = map->first;
+		if (!map->last) map->last = entry;
+		if (map->first) map->first->previous = entry;
+		map->first = entry;
+	}
+	return entry->value;
 }
 
 /* reset map without freeing all of its resources */

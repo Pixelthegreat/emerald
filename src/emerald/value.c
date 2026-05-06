@@ -29,6 +29,7 @@ static em_value_t multiply_int(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t divide_int(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t modulo_int(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t or_int(em_value_t a, em_value_t b, em_pos_t *pos);
+static em_value_t xor_int(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t and_int(em_value_t a, em_value_t b, em_pos_t *pos);
 static em_value_t not_int(em_value_t v, em_pos_t *pos);
 static em_value_t shift_left_int(em_value_t a, em_value_t b, em_pos_t *pos);
@@ -59,6 +60,7 @@ struct {
 	em_value_t (*divide)(em_value_t, em_value_t, em_pos_t *);
 	em_value_t (*modulo)(em_value_t, em_value_t, em_pos_t *);
 	em_value_t (*or)(em_value_t, em_value_t, em_pos_t *);
+	em_value_t (*xor)(em_value_t, em_value_t, em_pos_t *);
 	em_value_t (*and)(em_value_t, em_value_t, em_pos_t *);
 	em_value_t (*not)(em_value_t, em_pos_t *);
 	em_value_t (*shift_left)(em_value_t, em_value_t, em_pos_t *);
@@ -84,6 +86,7 @@ struct {
 		.divide = divide_int,
 		.modulo = modulo_int,
 		.or = or_int,
+		.xor = xor_int,
 		.and = and_int,
 		.not = not_int,
 		.shift_left = shift_left_int,
@@ -210,6 +213,14 @@ static em_value_t or_int(em_value_t a, em_value_t b, em_pos_t *pos) {
 	if (b.type != EM_VALUE_TYPE_INT) INVALID_OPERATION;
 
 	return EM_VALUE_INT(a.value.te_inttype | b.value.te_inttype);
+}
+
+/* xor ints */
+static em_value_t xor_int(em_value_t a, em_value_t b, em_pos_t *pos) {
+
+	if (b.type != EM_VALUE_TYPE_INT) INVALID_OPERATION;
+
+	return EM_VALUE_INT(a.value.te_inttype ^ b.value.te_inttype);
 }
 
 /* and ints */
@@ -500,6 +511,14 @@ EM_API em_value_t em_value_modulo(em_value_t a, em_value_t b, em_pos_t *pos) {
 EM_API em_value_t em_value_or(em_value_t a, em_value_t b, em_pos_t *pos) {
 
 	if (ops[a.type].or) return ops[a.type].or(a, b, pos);
+
+	INVALID_OPERATION;
+}
+
+/* xor values */
+EM_API em_value_t em_value_xor(em_value_t a, em_value_t b, em_pos_t *pos) {
+
+	if (ops[a.type].xor) return ops[a.type].xor(a, b, pos);
 
 	INVALID_OPERATION;
 }

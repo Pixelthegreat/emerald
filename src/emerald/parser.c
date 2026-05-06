@@ -185,6 +185,7 @@ EM_API em_node_t *em_parser_arith_expr(em_parser_t *parser) {
 	em_token_pair_t pairs[] = {
 		{EM_TOKEN_TYPE_PLUS, NULL}, {EM_TOKEN_TYPE_MINUS, NULL},
 		{EM_TOKEN_TYPE_BITWISE_OR, NULL}, {EM_TOKEN_TYPE_BITWISE_AND, NULL},
+		{EM_TOKEN_TYPE_BITWISE_XOR, NULL},
 	};
 	return em_parser_binop(parser, em_parser_term, pairs, EM_TOKEN_PAIR_COUNT(pairs));
 }

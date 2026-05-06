@@ -591,6 +591,9 @@ EM_API em_value_t em_context_visit_binary_operation(em_context_t *context, em_no
 	else if (token->type == EM_TOKEN_TYPE_BITWISE_OR)
 		result = em_value_or(left, right, &node->pos);
 
+	else if (token->type == EM_TOKEN_TYPE_BITWISE_XOR)
+		result = em_value_xor(left, right, &node->pos);
+
 	else if (token->type == EM_TOKEN_TYPE_BITWISE_AND)
 		result = em_value_and(left, right, &node->pos);
 

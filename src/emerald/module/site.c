@@ -139,6 +139,48 @@ static em_value_t site_readln(em_context_t *context, em_value_t *args, size_t na
 	return em_string_new_from_utf8(readbuf, em_utf8_strlen(readbuf));
 }
 
+/* convert value to integer */
+static em_value_t site_toInteger(em_context_t *context, em_value_t *args, size_t nargs, em_pos_t *pos) {
+
+	em_value_t value;
+	em_inttype_t it_value = 0;
+
+	if (em_util_parse_args(pos, args, nargs, "v", &value) != EM_RESULT_SUCCESS)
+		return EM_VALUE_FAIL;
+
+	/* convert string */
+	if (em_is_string(value)) {
+
+		em_string_t *string = EM_STRING(EM_OBJECT_FROM_VALUE(value));
+		const em_wchar_t *data = string->data;
+
+		for (; !EM_WCZ(*data); data++) {
+
+			int ch = EM_WC2INT(*data);
+			if (ch < L'0' || ch > L'9') {
+
+				em_log_runtime_error(pos, "Invalid character in integer literal");
+				return EM_VALUE_FAIL;
+			}
+			it_value = it_value * 10 + (em_inttype_t)(ch - L'0');
+		}
+	}
+
+	/* already a number */
+	else if (value.type == EM_VALUE_TYPE_FLOAT)
+		it_value = (em_inttype_t)value.value.te_floattype;
+
+	else if (value.type == EM_VALUE_TYPE_INT)
+		it_value = value.value.te_inttype;
+
+	/* otherwise */
+	else {
+		em_log_runtime_error(pos, "Invalid arguments");
+		return EM_VALUE_FAIL;
+	}
+	return EM_VALUE_INT(it_value);
+}
+
 /* initialize module */
 static em_result_t initialize(em_context_t *context, em_value_t map) {
 
@@ -150,6 +192,7 @@ static em_result_t initialize(em_context_t *context, em_value_t map) {
 	em_util_set_function(map, "print", site_print);
 	em_util_set_function(map, "println", site_println);
 	em_util_set_function(map, "readln", site_readln);
+	em_util_set_function(map, "toInteger", site_toInteger);
 
 	/* common variables */
 	em_util_set_value(map, "true", EM_VALUE_TRUE);

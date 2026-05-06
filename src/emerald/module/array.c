@@ -47,6 +47,19 @@ static em_value_t array_Array(em_context_t *context, em_value_t *args, size_t na
 	return em_byte_array_new((size_t)size, (em_byte_array_mode_t)mode);
 }
 
+/* extract data from array to other array */
+static em_value_t array_slice(em_context_t *context, em_value_t *args, size_t nargs, em_pos_t *pos) {
+
+	em_value_t array, other;
+	em_inttype_t it_index;
+
+	if (em_util_parse_args(pos, args, nargs, "bbi", &array, &other, &it_index) != EM_RESULT_SUCCESS)
+		return EM_VALUE_FAIL;
+
+	em_byte_array_slice(array, other, it_index);
+	return em_none;
+}
+
 /* initialize module */
 static em_result_t initialize(em_context_t *context, em_value_t map) {
 
@@ -64,6 +77,7 @@ static em_result_t initialize(em_context_t *context, em_value_t map) {
 
 	/* functions */
 	em_util_set_function(mod, "Array", array_Array);
+	em_util_set_function(mod, "slice", array_slice);
 
 	return EM_RESULT_SUCCESS;
 }
@@ -217,6 +231,28 @@ EM_API em_inttype_t em_byte_array_get(em_value_t object, em_ssize_t index) {
 		default:
 			return 0;
 	}
+}
+
+/* extract range of values from array */
+EM_API void em_byte_array_slice(em_value_t object, em_value_t other, em_ssize_t index) {
+
+	em_byte_array_t *array = EM_BYTE_ARRAY(EM_OBJECT_FROM_VALUE(object));
+	if (index < 0) index = (em_ssize_t)array->size - index;
+
+	if (index < 0 || index >= (em_ssize_t)array->size)
+		return;
+
+	em_byte_array_t *array_other = EM_BYTE_ARRAY(EM_OBJECT_FROM_VALUE(other));
+
+	if (array->mode != array_other->mode)
+		return;
+
+	size_t size = array->size - (size_t)index;
+	if (size > array_other->size) size = array_other->size;
+
+	memcpy(array_other->data,
+	       array->data + (size_t)index * modesizes[array->mode],
+	       size * modesizes[array_other->mode]);
 }
 
 /* determine if value is byte array */

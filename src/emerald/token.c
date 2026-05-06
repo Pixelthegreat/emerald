@@ -43,6 +43,7 @@ static const char *typenames[EM_TOKEN_TYPE_COUNT] = {
 	"BITWISE_RIGHT_SHIFT",
 	"BITWISE_AND",
 	"BITWISE_OR",
+	"BITWISE_XOR",
 	"BITWISE_NOT",
 	"EOF",
 };

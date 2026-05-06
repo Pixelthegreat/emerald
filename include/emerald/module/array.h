@@ -40,6 +40,7 @@ typedef struct em_byte_array {
 EM_API em_value_t em_byte_array_new(size_t size, em_byte_array_mode_t mode); /* create byte array */
 EM_API void em_byte_array_set(em_value_t object, em_ssize_t index, em_inttype_t value); /* set value in byte array */
 EM_API em_inttype_t em_byte_array_get(em_value_t object, em_ssize_t index); /* get value from byte array */
+EM_API void em_byte_array_slice(em_value_t object, em_value_t other, em_ssize_t index); /* extract range of values from array */
 EM_API em_bool_t em_is_byte_array(em_value_t v); /* determine if value is byte array */
 
 #endif /* EMERALD_MODULE_ARRAY_H */

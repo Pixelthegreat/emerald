@@ -51,6 +51,7 @@ EM_API em_value_t em_value_multiply(em_value_t a, em_value_t b, em_pos_t *pos); 
 EM_API em_value_t em_value_divide(em_value_t a, em_value_t b, em_pos_t *pos); /* divide values */
 EM_API em_value_t em_value_modulo(em_value_t a, em_value_t b, em_pos_t *pos); /* modulo values */
 EM_API em_value_t em_value_or(em_value_t a, em_value_t b, em_pos_t *pos); /* or values */
+EM_API em_value_t em_value_xor(em_value_t a, em_value_t b, em_pos_t *pos); /* xor values */
 EM_API em_value_t em_value_and(em_value_t a, em_value_t b, em_pos_t *pos); /* and values */
 EM_API em_value_t em_value_not(em_value_t v, em_pos_t *pos); /* bitwise not value */
 EM_API em_value_t em_value_shift_left(em_value_t a, em_value_t b, em_pos_t *pos); /* shift left */
