@@ -39,6 +39,11 @@ newoption {
 	description = 'Disable specific modules',
 }
 
+newoption {
+	trigger = 'build-static',
+	description = 'Build static library instead of shared',
+}
+
 -- Determine module list --
 em_modules = {
 	'array',
@@ -89,6 +94,7 @@ filter 'options:enable-asan'
 
 -- Core emerald interpreter --
 project 'emerald'
+	kind 'SharedLib'
 	files {'src/emerald/*.c', 'include/emerald/*.h', 'include/emerald.h'}
 	includedirs {'obj'}
 	links {'m'}
@@ -112,9 +118,7 @@ project 'emerald'
 	io.writefile('obj/modules.h', string.format('%s\n%s', em_module_proto, em_module_table))
 
 	-- Configuration filters --
-	filter 'configurations:debug'
-		kind 'SharedLib'
-	filter 'configurations:release'
+	filter 'options:build-static'
 		kind 'StaticLib'
 
 -- Emerald shell --
