@@ -10,6 +10,7 @@
 #include <emerald/core.h>
 #include <emerald/utf8.h>
 #include <emerald/wchar.h>
+#include <emerald/file.h>
 #include <emerald/path.h>
 
 #if defined EM_WINDOWS
@@ -23,20 +24,7 @@
 /* check if file exists */
 EM_API em_bool_t em_path_exists(const char *path) {
 
-#if defined EM_WINDOWS
-	DWORD attributes = GetFileAttributesA(path);
-	return (em_bool_t)(attributes != INVALID_FILE_ATTRIBUTES && !(attributes & FILE_ATTRIBUTE_DIRECTORY));
-#elif defined EM_ECLAIR
-	ec_stat_t st;
-	if (ec_stat(path, &st) < 0) return EM_FALSE;
-
-	return st.flags & ECS_REG;
-#else
-	struct stat st;
-	if (stat(path, &st) < 0) return EM_FALSE;
-	
-	return (em_bool_t)S_ISREG(st.st_mode);
-#endif
+	return em_file_exists(path);
 }
 
 /* join path names together */

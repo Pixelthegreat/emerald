@@ -17,6 +17,7 @@
 #include <emerald/wchar.h>
 #include <emerald/utf8.h>
 #include <emerald/path.h>
+#include <emerald/file.h>
 #include <emerald/context.h>
 #include <emerald/string.h>
 #include <emerald/module/array.h>
@@ -116,19 +117,7 @@ static em_value_t os_exists(em_context_t *context, em_value_t *args, size_t narg
 
 	em_wpath_fix(pathbuf, PATHBUFSZ, path);
 
-#if defined EM_WINDOWS
-
-#elif defined EM_ECLAIR
-	ec_stat_t st;
-	if (ec_stat(pathbuf, &st) < 0)
-		return EM_VALUE_FALSE;
-	return EM_VALUE_TRUE;
-#else
-	struct stat st;
-	if (stat(pathbuf, &st) < 0)
-		return EM_VALUE_FALSE;
-	return EM_VALUE_TRUE;
-#endif
+	return EM_VALUE_INT((em_inttype_t)em_path_exists(pathbuf));
 }
 
 /* open file */

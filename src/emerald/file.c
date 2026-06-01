@@ -14,7 +14,16 @@
 #define ERRBUFSZ 256
 static char errbuf[ERRBUFSZ];
 
+#if defined EM_WINDOWS
+#include <windows.h>
+#elif defined EM_ECLAIR
+#include <ec.h>
+#else
+#include <sys/stat.h>
+#endif
+
 /* file operations */
+static em_bool_t fp_exists(const char *path);
 static void *fp_open(const char *path, const char *mode);
 static size_t fp_read(void *data, void *buffer, size_t count);
 static size_t fp_write(void *data, const void *buffer, size_t count);
@@ -22,12 +31,34 @@ static long fp_seek(void *data, long offset, int whence);
 static void fp_close(void *data);
 
 static em_file_ops_t file_ops = {
+	.exists = fp_exists,
 	.open = fp_open,
 	.read = fp_read,
 	.write = fp_write,
 	.seek = fp_seek,
 	.close = fp_close,
 };
+
+/* check if libc file exists */
+static em_bool_t fp_exists(const char *path) {
+
+#if defined EM_WINDOWS
+	DWORD attributes = GetFileAttributesA(path);
+	if (attributes != INVALID_FILE_ATTRIBUTES && !(attributes & FILE_ATTRIBUTE_DIRECTORY))
+		return EM_TRUE;
+	return EM_FALSE;
+#elif defined EM_ECLAIR
+	ec_stat_t st;
+	if (ec_stat(path, &st) < 0) return EM_FALSE;
+
+	return (st.flags & ECS_REG)? EM_TRUE: EM_FALSE;
+#else
+	struct stat st;
+	if (stat(path, &st) < 0) return EM_FALSE;
+	
+	return S_ISREG(st.st_mode)? EM_TRUE: EM_FALSE;
+#endif
+}
 
 /* open libc file */
 static void *fp_open(const char *path, const char *mode) {
@@ -90,6 +121,12 @@ EM_API void em_set_file_error(const char *fmt, ...) {
 EM_API const char *em_get_file_error(void) {
 
 	return *errbuf? errbuf: NULL;
+}
+
+/* check if file exists */
+EM_API em_bool_t em_file_exists(const char *path) {
+
+	return file_ops.exists(path);
 }
 
 /* open file */
