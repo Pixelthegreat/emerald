@@ -67,6 +67,7 @@ static void node_free(void *p) {
 		res = em_array_get(&node->tokens, i);
 		if (res.p) EM_TOKEN_DECREF((em_token_t *)res.v.t_voidp);
 	}
+	em_array_destroy(&node->values);
 	em_array_destroy(&node->tokens);
 }
 
@@ -96,12 +97,19 @@ EM_API em_node_t *em_node_new(em_node_type_t type, em_pos_t *pos) {
 	node->prev = NULL;
 	node->next = NULL;
 	node->tokens = EM_ARRAY_INIT;
+	node->values = EM_ARRAY_INIT;
 
 	if (em_array_init(&node->tokens) != EM_RESULT_SUCCESS) {
 
 		EM_NODE_DECREF(node);
 		return NULL;
 	}
+	if (em_array_init(&node->values) != EM_RESULT_SUCCESS) {
+
+		EM_NODE_DECREF(node);
+		return NULL;
+	}
+
 	return node;
 }
 
@@ -131,6 +139,14 @@ EM_API void em_node_add_token(em_node_t *node, em_token_t *token) {
 	EM_TOKEN_INCREF(token);
 }
 
+/* add generic value */
+EM_API void em_node_add_value(em_node_t *node, em_generic_t value) {
+
+	if (!node) return;
+
+	(void)em_array_add(&node->values, value);
+}
+
 /* get token */
 EM_API em_token_t *em_node_get_token(em_node_t *node, size_t index) {
 
@@ -140,6 +156,14 @@ EM_API em_token_t *em_node_get_token(em_node_t *node, size_t index) {
 	if (!res.p) return NULL;
 
 	return (em_token_t *)res.v.t_voidp;
+}
+
+/* get value */
+EM_API em_generic_result_t em_node_get_value(em_node_t *node, size_t index) {
+
+	if (!node) return (em_generic_result_t){.p = EM_FALSE};
+
+	return em_array_get(&node->values, index);
 }
 
 /* print node information */

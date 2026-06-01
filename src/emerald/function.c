@@ -73,7 +73,11 @@ static em_value_t call(struct em_context *context, em_value_t v, em_value_t *arg
 
 	/* pop_scope may or may not delete result, so prevent it from doing so */
 	em_value_incref(result);
+	em_value_incref(context->pass);
+
 	em_context_pop_scope(context);
+
+	em_value_decref_no_free(context->pass);
 	em_value_decref(result);
 
 	if (em_log_catch(&em_class_system_return)) {

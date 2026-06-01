@@ -11,6 +11,7 @@
 #include <errno.h>
 #include <emerald/core.h>
 #include <emerald/memory.h>
+#include <emerald/file.h>
 #include <emerald/none.h>
 #include <emerald/util.h>
 #include <emerald/wchar.h>
@@ -42,7 +43,7 @@
 #define MAX_FILES 32
 struct {
 	em_value_t map; /* file object */
-	FILE *fp; /* file pointer */
+	void *fp; /* file pointer */
 	em_inttype_t flags; /* open flags */
 } files[MAX_FILES];
 
@@ -164,11 +165,10 @@ static em_value_t os_openFile(em_context_t *context, em_value_t *args, size_t na
 	/* open file */
 	em_wpath_fix(pathbuf, PATHBUFSZ, path);
 
-	FILE *fp = fopen(pathbuf, modestr);
-
+	void *fp = em_file_open(pathbuf, modestr);
 	if (!fp) {
 
-		em_log_runtime_error(pos, "Can't open '%s': %s", pathbuf, strerror(errno));
+		em_log_runtime_error(pos, "Can't open file '%s': %s", pathbuf, em_get_file_error());
 		return EM_VALUE_FAIL;
 	}
 
@@ -220,7 +220,7 @@ static em_value_t os_readFile(em_context_t *context, em_value_t *args, size_t na
 			return EM_VALUE_FAIL;
 		}
 
-		nread = fread(array->data, 1, array->size, files[i].fp);
+		nread = em_file_read(files[i].fp, array->data, array->size);
 		return EM_VALUE_INT((em_inttype_t)nread);
 	}
 
@@ -240,18 +240,21 @@ static em_value_t os_readFile(em_context_t *context, em_value_t *args, size_t na
 		if (nbuf >= sizeof(buf)-1)
 			nbuf = 0;
 
-		int ch = fgetc(files[i].fp);
-		if (ch == EOF) break;
+		char ch;
+		int wc;
 
-		buf[nbuf++] = (char)ch;
+		if (em_file_read(files[i].fp, &ch, sizeof(char)) != sizeof(char))
+			break;
+
+		buf[nbuf++] = ch;
 		buf[nbuf] = 0;
 
 		em_ssize_t nbytes;
-		ch = em_utf8_getch(buf, &nbytes);
-		if (ch < 0 || nbytes < 0)
+		wc = em_utf8_getch(buf, &nbytes);
+		if (wc < 0 || nbytes < 0)
 			continue;
 		nbuf = 0;
-		string->data[nread++] = EM_INT2WC(ch);
+		string->data[nread++] = EM_INT2WC(wc);
 	}
 	return EM_VALUE_INT((em_inttype_t)nread);
 }
@@ -294,7 +297,7 @@ static em_value_t os_writeFile(em_context_t *context, em_value_t *args, size_t n
 			return EM_VALUE_FAIL;
 		}
 
-		nwritten = fwrite(array->data, 1, array->size, files[i].fp);
+		nwritten = em_file_write(files[i].fp, array->data, array->size);
 		return EM_VALUE_INT((em_inttype_t)nwritten);
 	}
 
@@ -315,7 +318,7 @@ static em_value_t os_writeFile(em_context_t *context, em_value_t *args, size_t n
 		buf[size] = 0;
 
 		for (size_t j = 0; j < strlen(buf); j++) {
-			if (fputc(buf[j], files[i].fp) == EOF)
+			if (em_file_write(files[i].fp, buf+j, sizeof(char)) != sizeof(char))
 				break;
 		}
 	}
@@ -350,9 +353,9 @@ static em_value_t os_seekFile(em_context_t *context, em_value_t *args, size_t na
 
 	if (files[i].flags & FLAG_WRITE)
 		fflush(files[i].fp);
-	fseek(files[i].fp, (long)position, fwhence);
+	position = (em_inttype_t)em_file_seek(files[i].fp, (long)position, fwhence);
 
-	return EM_VALUE_INT((em_inttype_t)ftell(files[i].fp));
+	return EM_VALUE_INT(position);
 }
 
 /* close file */
@@ -373,7 +376,7 @@ static em_value_t os_closeFile(em_context_t *context, em_value_t *args, size_t n
 
 	EM_MAP(EM_OBJECT_FROM_VALUE(files[i].map))->userdata = (void *)MAX_FILES;
 
-	fclose(files[i].fp);
+	em_file_close(files[i].fp);
 	files[i].fp = NULL;
 
 	em_value_decref(files[i].map);

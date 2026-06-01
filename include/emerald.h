@@ -17,6 +17,7 @@
 #include <emerald/log.h>
 #include <emerald/refobj.h>
 #include <emerald/main.h>
+#include <emerald/file.h>
 #include <emerald/token.h>
 #include <emerald/lexer.h>
 #include <emerald/node.h>

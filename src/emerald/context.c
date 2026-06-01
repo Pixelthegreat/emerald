@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <emerald/core.h>
 #include <emerald/memory.h>
+#include <emerald/file.h>
 #include <emerald/utf8.h>
 #include <emerald/wchar.h>
 #include <emerald/hash.h>
@@ -333,21 +334,20 @@ EM_API em_value_t em_context_run_file(em_context_t *context, em_pos_t *pos, cons
 	}
 
 	/* read file */
-	FILE *fp = fopen(rpath, "rb");
+	void *fp = em_file_open(rpath, "rb");
 	if (!fp) {
 
-		em_log_runtime_error(pos, "%s: '%s'", strerror(errno), path);
+		em_log_runtime_error(pos, "%s: '%s'", em_get_file_error(), path);
 		return EM_VALUE_FAIL;
 	}
 
-	fseek(fp, 0, SEEK_END);
-	size_t len = (size_t)ftell(fp);
-	fseek(fp, 0, SEEK_SET);
+	size_t len = (size_t)em_file_seek(fp, 0, SEEK_END);
+	em_file_seek(fp, 0, SEEK_SET);
 
 	char *fbuf = (char *)em_malloc(len+1);
-	fread(fbuf, 1, len, fp);
+	em_file_read(fp, fbuf, len);
 	fbuf[len] = 0;
-	fclose(fp);
+	em_file_close(fp);
 
 	/* make file record */
 	size_t reclen = strlen(rpath);
@@ -444,8 +444,8 @@ EM_API em_value_t em_context_visit_string(em_context_t *context, em_node_t *node
 EM_API em_value_t em_context_visit_identifier(em_context_t *context, em_node_t *node) {
 
 	em_token_t *token = em_node_get_token(node, 0);
+	em_hash_t key = em_node_get_value(node, 0).v.te_hash;
 
-	em_hash_t key = em_utf8_strhash(token->value);
 	em_value_t value = em_context_get_value(context, key);
 
 	if (!EM_VALUE_OK(value)) {
@@ -678,7 +678,7 @@ EM_API em_value_t em_context_visit_access(em_context_t *context, em_node_t *node
 	}
 	else {
 
-		em_hash_t hash = em_utf8_strhash(name_token->value);
+		em_hash_t hash = em_node_get_value(node, 0).v.te_hash;
 		value = em_value_get_by_hash(container, hash, &node->pos);
 
 		if (!EM_VALUE_OK(value) && !em_log_catch(NULL))

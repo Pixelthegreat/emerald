@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <emerald/core.h>
 #include <emerald/memory.h>
+#include <emerald/hash.h>
 #include <emerald/parser.h>
 
 /* check if token is in list of match pairs */
@@ -292,8 +293,12 @@ EM_API em_node_t *em_parser_call_extension(em_parser_t *parser, em_node_t *facto
 		em_parser_advance(parser);
 
 		em_node_t *node = em_node_new(EM_NODE_TYPE_ACCESS, &factor->pos);
+
 		em_node_add_child(node, factor);
 		em_node_add_token(node, name);
+
+		em_generic_t value = {.te_hash = em_utf8_strhash(name->value)};
+		em_node_add_value(node, value);
 
 		return node;
 	}
@@ -509,6 +514,9 @@ EM_API em_node_t *em_parser_factor(em_parser_t *parser) {
 
 		em_node_t *node = em_node_new(EM_NODE_TYPE_IDENTIFIER, &token->pos);
 		em_node_add_token(node, token);
+
+		em_generic_t value = {.te_hash = em_utf8_strhash(token->value)};
+		em_node_add_value(node, value);
 
 		return node;
 	}

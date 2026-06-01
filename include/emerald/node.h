@@ -62,6 +62,7 @@ typedef struct em_node {
 	struct em_node *prev; /* previous sibling */
 	struct em_node *next; /* next sibling */
 	em_array_t tokens; /* saved tokens */
+	em_array_t values; /* saved values */
 } em_node_t;
 
 #define EM_NODE(p) ((em_node_t *)(p))
@@ -77,7 +78,9 @@ EM_API const char *em_get_node_type_name(em_node_type_t type); /* get name from 
 EM_API em_node_t *em_node_new(em_node_type_t type, em_pos_t *pos); /* create node */
 EM_API void em_node_add_child(em_node_t *node, em_node_t *child); /* add child node */
 EM_API void em_node_add_token(em_node_t *node, em_token_t *token); /* add token */
+EM_API void em_node_add_value(em_node_t *node, em_generic_t value); /* add generic value */
 EM_API em_token_t *em_node_get_token(em_node_t *node, size_t index); /* get token */
+EM_API em_generic_result_t em_node_get_value(em_node_t *node, size_t index); /* get value */
 EM_API void em_node_print(em_node_t *node); /* print node information */
 
 #endif /* EMERALD_NODE_H */
