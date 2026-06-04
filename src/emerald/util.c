@@ -211,6 +211,17 @@ EM_API em_result_t em_util_parse_vargs(em_pos_t *pos, em_value_t *args, size_t n
 				if (pbarray) *pbarray = arg;
 				break;
 
+			/* byte array view */
+			case 'B':
+				if (none_rule &&
+				    !em_is_byte_array_view(arg))
+					INVALID_ARGUMENTS;
+				if (rc) break;
+
+				em_value_t *pbview = (em_value_t *)pointer;
+				if (pbview) *pbview = arg;
+				break;
+
 			/* error */
 			default:
 				em_log_fatal("Invalid format string");

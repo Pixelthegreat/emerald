@@ -36,11 +36,27 @@ typedef struct em_byte_array {
 
 #define EM_BYTE_ARRAY(p) ((em_byte_array_t *)(p))
 
+/* byte array view */
+typedef struct em_byte_array_view {
+	em_object_t base;
+	em_value_t array; /* attached array */
+	size_t start; /* starting index */
+	size_t count; /* number of items to view */
+} em_byte_array_view_t;
+
+#define EM_BYTE_ARRAY_VIEW(p) ((em_byte_array_view_t *)(p))
+
 /* functions */
 EM_API em_value_t em_byte_array_new(size_t size, em_byte_array_mode_t mode); /* create byte array */
 EM_API void em_byte_array_set(em_value_t object, em_ssize_t index, em_inttype_t value); /* set value in byte array */
 EM_API em_inttype_t em_byte_array_get(em_value_t object, em_ssize_t index); /* get value from byte array */
 EM_API void em_byte_array_slice(em_value_t object, em_value_t other, em_ssize_t index); /* extract range of values from array */
 EM_API em_bool_t em_is_byte_array(em_value_t v); /* determine if value is byte array */
+
+EM_API em_value_t em_byte_array_view_new(void); /* create byte array view */
+EM_API void em_byte_array_view_set_array(em_value_t object, em_value_t array, size_t start, size_t count); /* attach array to view */
+EM_API void em_byte_array_view_set(em_value_t object, em_ssize_t index, em_inttype_t value); /* set value in view */
+EM_API em_inttype_t em_byte_array_view_get(em_value_t object, em_ssize_t index); /* get value from view */
+EM_API em_bool_t em_is_byte_array_view(em_value_t v); /* determine if value is byte array view */
 
 #endif /* EMERALD_MODULE_ARRAY_H */

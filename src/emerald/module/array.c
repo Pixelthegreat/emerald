@@ -60,6 +60,33 @@ static em_value_t array_slice(em_context_t *context, em_value_t *args, size_t na
 	return em_none;
 }
 
+/* create byte array view */
+static em_value_t array_View(em_context_t *context, em_value_t *args, size_t nargs, em_pos_t *pos) {
+
+	if (nargs) {
+
+		em_log_runtime_error(pos, "Invalid arguments");
+		return EM_VALUE_FAIL;
+	}
+	return em_byte_array_view_new();
+}
+
+/* attach byte array to view */
+static em_value_t array_setView(em_context_t *context, em_value_t *args, size_t nargs, em_pos_t *pos) {
+
+	em_value_t view, array;
+	em_inttype_t it_start, it_count;
+
+	if (em_util_parse_args(pos, args, nargs, "B~bii", &view, &array, &it_start, &it_count) != EM_RESULT_SUCCESS)
+		return EM_VALUE_FAIL;
+
+	if (it_start < 0) it_start = 0;
+	if (it_count < 0) it_count = 0;
+
+	em_byte_array_view_set_array(view, array, (size_t)it_start, (size_t)it_count);
+	return em_none;
+}
+
 /* initialize module */
 static em_result_t initialize(em_context_t *context, em_value_t map) {
 
@@ -79,24 +106,27 @@ static em_result_t initialize(em_context_t *context, em_value_t map) {
 	em_util_set_function(mod, "Array", array_Array);
 	em_util_set_function(mod, "slice", array_slice);
 
+	em_util_set_function(mod, "View", array_View);
+	em_util_set_function(mod, "setView", array_setView);
+
 	return EM_RESULT_SUCCESS;
 }
 
-/* type */
-static em_value_t get_by_index(em_value_t v, em_value_t i, em_pos_t *pos);
-static em_result_t set_by_index(em_value_t a, em_value_t i, em_value_t b, em_pos_t *pos);
-static em_value_t length_of(em_value_t v, em_pos_t *pos);
-static em_value_t to_string(em_value_t v, em_pos_t *pos);
+/* byte array type */
+static em_value_t array_get_by_index(em_value_t v, em_value_t i, em_pos_t *pos);
+static em_result_t array_set_by_index(em_value_t a, em_value_t i, em_value_t b, em_pos_t *pos);
+static em_value_t array_length_of(em_value_t v, em_pos_t *pos);
+static em_value_t array_to_string(em_value_t v, em_pos_t *pos);
 
-static em_object_type_t type = {
-	.get_by_index = get_by_index,
-	.set_by_index = set_by_index,
-	.length_of = length_of,
-	.to_string = to_string,
+static em_object_type_t array_type = {
+	.get_by_index = array_get_by_index,
+	.set_by_index = array_set_by_index,
+	.length_of = array_length_of,
+	.to_string = array_to_string,
 };
 
 /* get value by index */
-static em_value_t get_by_index(em_value_t v, em_value_t i, em_pos_t *pos) {
+static em_value_t array_get_by_index(em_value_t v, em_value_t i, em_pos_t *pos) {
 
 	em_byte_array_t *array = EM_BYTE_ARRAY(EM_OBJECT_FROM_VALUE(v));
 
@@ -109,7 +139,7 @@ static em_value_t get_by_index(em_value_t v, em_value_t i, em_pos_t *pos) {
 }
 
 /* set value by index */
-static em_result_t set_by_index(em_value_t a, em_value_t i, em_value_t b, em_pos_t *pos) {
+static em_result_t array_set_by_index(em_value_t a, em_value_t i, em_value_t b, em_pos_t *pos) {
 
 	em_byte_array_t *array = EM_BYTE_ARRAY(EM_OBJECT_FROM_VALUE(a));
 
@@ -129,14 +159,14 @@ static em_result_t set_by_index(em_value_t a, em_value_t i, em_value_t b, em_pos
 }
 
 /* get length of byte array */
-static em_value_t length_of(em_value_t v, em_pos_t *pos) {
+static em_value_t array_length_of(em_value_t v, em_pos_t *pos) {
 
 	em_byte_array_t *array = EM_BYTE_ARRAY(EM_OBJECT_FROM_VALUE(v));
 	return EM_VALUE_INT((em_inttype_t)array->size);
 }
 
 /* get string representation of byte array */
-static em_value_t to_string(em_value_t v, em_pos_t *pos) {
+static em_value_t array_to_string(em_value_t v, em_pos_t *pos) {
 
 	em_byte_array_t *array = EM_BYTE_ARRAY(EM_OBJECT_FROM_VALUE(v));
 
@@ -151,7 +181,7 @@ EM_API em_value_t em_byte_array_new(size_t size, em_byte_array_mode_t mode) {
 
 	size_t full_size = size * modesizes[mode];
 
-	em_value_t value = em_object_new(&type, sizeof(em_byte_array_t) + full_size);
+	em_value_t value = em_object_new(&array_type, sizeof(em_byte_array_t) + full_size);
 	em_byte_array_t *array = EM_BYTE_ARRAY(EM_OBJECT_FROM_VALUE(value));
 
 	array->size = size;
@@ -258,5 +288,133 @@ EM_API void em_byte_array_slice(em_value_t object, em_value_t other, em_ssize_t 
 /* determine if value is byte array */
 EM_API em_bool_t em_is_byte_array(em_value_t v) {
 
-	return v.type == EM_VALUE_TYPE_OBJECT && EM_OBJECT_FROM_VALUE(v)->type == &type;
+	return v.type == EM_VALUE_TYPE_OBJECT && EM_OBJECT_FROM_VALUE(v)->type == &array_type;
+}
+
+/* byte array view type */
+static em_value_t view_get_by_index(em_value_t v, em_value_t i, em_pos_t *pos);
+static em_result_t view_set_by_index(em_value_t a, em_value_t i, em_value_t b, em_pos_t *pos);
+static em_value_t view_length_of(em_value_t v, em_pos_t *pos);
+static em_value_t view_to_string(em_value_t v, em_pos_t *pos);
+
+static em_object_type_t view_type = {
+	.get_by_index = view_get_by_index,
+	.set_by_index = view_set_by_index,
+	.length_of = view_length_of,
+	.to_string = view_to_string,
+};
+
+/* get value by index */
+static em_value_t view_get_by_index(em_value_t v, em_value_t i, em_pos_t *pos) {
+
+	em_byte_array_view_t *view = EM_BYTE_ARRAY_VIEW(EM_OBJECT_FROM_VALUE(v));
+
+	if (i.type != EM_VALUE_TYPE_INT ||
+	    i.value.te_inttype < 0 ||
+	    i.value.te_inttype >= (em_inttype_t)view->count)
+		return EM_VALUE_FAIL;
+
+	return EM_VALUE_INT(em_byte_array_view_get(v, (em_ssize_t)i.value.te_inttype));
+}
+
+/* set value by index */
+static em_result_t view_set_by_index(em_value_t a, em_value_t i, em_value_t b, em_pos_t *pos) {
+
+	em_byte_array_view_t *view = EM_BYTE_ARRAY_VIEW(EM_OBJECT_FROM_VALUE(a));
+	if (!em_is_byte_array(view->array))
+		return EM_RESULT_FAILURE;
+
+	if (b.type != EM_VALUE_TYPE_INT) {
+
+		em_log_runtime_error(pos, "Invalid operation");
+		return EM_RESULT_FAILURE;
+	}
+
+	if (i.type != EM_VALUE_TYPE_INT ||
+	    i.value.te_inttype < 0 ||
+	    i.value.te_inttype >= (em_inttype_t)view->count)
+		return EM_RESULT_FAILURE;
+
+	em_byte_array_view_set(a, (em_ssize_t)i.value.te_inttype, b.value.te_inttype);
+	return EM_RESULT_SUCCESS;
+}
+
+/* get length of view */
+static em_value_t view_length_of(em_value_t v, em_pos_t *pos) {
+
+	em_byte_array_view_t *view = EM_BYTE_ARRAY_VIEW(EM_OBJECT_FROM_VALUE(v));
+
+	return EM_VALUE_INT((em_inttype_t)view->count);
+}
+
+/* get string representation of byte array view */
+static em_value_t view_to_string(em_value_t v, em_pos_t *pos) {
+
+	return em_string_new_from_utf8("<Byte array view>", 17);
+}
+
+/* free byte array view */
+static void view_free(void *p) {
+
+	em_byte_array_view_t *view = EM_BYTE_ARRAY_VIEW(p);
+
+	if (em_is_byte_array(view->array))
+		em_value_decref(view->array);
+}
+
+/* create byte array view */
+EM_API em_value_t em_byte_array_view_new(void) {
+
+	em_value_t value = em_object_new(&view_type, sizeof(em_byte_array_view_t));
+	em_byte_array_view_t *view =  EM_BYTE_ARRAY_VIEW(EM_OBJECT_FROM_VALUE(value));
+
+	EM_REFOBJ(view)->free = view_free;
+
+	view->array = em_none;
+	em_value_incref(em_none);
+
+	return value;
+}
+
+/* attach array to view */
+EM_API void em_byte_array_view_set_array(em_value_t object, em_value_t array, size_t start, size_t count) {
+
+	em_byte_array_view_t *view = EM_BYTE_ARRAY_VIEW(EM_OBJECT_FROM_VALUE(object));
+
+	if (!em_value_is(view->array, array)) {
+
+		em_value_incref(array);
+		em_value_decref(view->array);
+
+		view->array = array;
+	}
+
+	view->start = start;
+	view->count = count;
+}
+
+/* set value in view */
+EM_API void em_byte_array_view_set(em_value_t object, em_ssize_t index, em_inttype_t value) {
+
+	em_byte_array_view_t *view = EM_BYTE_ARRAY_VIEW(EM_OBJECT_FROM_VALUE(object));
+	if (!em_is_byte_array(view->array))
+		return;
+
+	em_byte_array_set(view->array, (em_ssize_t)view->start + index, value);
+}
+
+/* get value from view */
+EM_API em_inttype_t em_byte_array_view_get(em_value_t object, em_ssize_t index) {
+
+	em_byte_array_view_t *view = EM_BYTE_ARRAY_VIEW(EM_OBJECT_FROM_VALUE(object));
+	if (!em_is_byte_array(view->array))
+		return 0;
+
+	return em_byte_array_get(view->array, (em_ssize_t)view->start + index);
+}
+
+/* determine if value is byte array view */
+EM_API em_bool_t em_is_byte_array_view(em_value_t v) {
+
+	return v.type == EM_VALUE_TYPE_OBJECT && EM_OBJECT_FROM_VALUE(v)->type == &view_type;
 }

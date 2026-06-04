@@ -17,6 +17,7 @@
  *   - l: list
  *   - m: map
  *   - b: byte array
+ *   - B: byte array view
  * The '*' character works like a regex zero or more
  * repeat, and should if necessary follow the last
  * token.
