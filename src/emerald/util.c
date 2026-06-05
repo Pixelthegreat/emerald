@@ -14,6 +14,7 @@
 #include <emerald/class.h>
 #include <emerald/none.h>
 #include <emerald/module/array.h>
+#include <emerald/module/dict.h>
 #include <emerald/util.h>
 
 #define INVALID_ARGUMENTS ({\
@@ -198,6 +199,17 @@ EM_API em_result_t em_util_parse_vargs(em_pos_t *pos, em_value_t *args, size_t n
 
 				em_value_t *pmap = (em_value_t *)pointer;
 				if (pmap) *pmap = arg;
+				break;
+
+			/* dictionary */
+			case 'M':
+				if (none_rule &&
+				    !em_is_dict(arg))
+					INVALID_ARGUMENTS;
+				if (rc) break;
+
+				em_value_t *pdict = (em_value_t *)pointer;
+				if (pdict) *pdict = arg;
 				break;
 
 			/* byte array */

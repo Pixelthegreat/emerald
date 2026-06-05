@@ -11,7 +11,8 @@
 
 /* map entry */
 typedef struct em_map_entry {
-	em_hash_t key; /* hashed key */
+	em_value_t key; /* key value (not always present) */
+	em_hash_t key_hash; /* hashed key */
 	em_value_t value; /* entry value */
 	struct em_map_entry *previous; /* previous entry */
 	struct em_map_entry *next; /* next entry */
@@ -29,7 +30,8 @@ typedef struct em_map {
 
 /* functions */
 EM_API em_value_t em_map_new(void); /* create map */
-EM_API void em_map_set(em_value_t object, em_hash_t key, em_value_t value); /* set value */
+EM_API void em_map_set_key(em_value_t object, em_value_t key, em_hash_t key_hash, em_value_t value); /* set value with key */
+EM_API void em_map_set(em_value_t object, em_hash_t key, em_value_t value); /* set value with key hash */
 EM_API em_value_t em_map_get(em_value_t object, em_hash_t key); /* get value */
 EM_API void em_map_soft_reset(em_value_t object); /* reset map without freeing all of its resources */
 EM_API em_value_t em_map_copy(em_value_t object); /* copy map */

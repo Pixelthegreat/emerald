@@ -77,8 +77,8 @@ static void copy_values(em_class_t *class, em_value_t instance) {
 
 		if (em_is_function(entry->value) ||
 		    em_is_builtin_function(entry->value))
-			em_map_set(instance, entry->key, em_method_new(instance, entry->value));
-		else em_map_set(instance, entry->key, entry->value);
+			em_map_set(instance, entry->key_hash, em_method_new(instance, entry->value));
+		else em_map_set(instance, entry->key_hash, entry->value);
 
 		entry = entry->next;
 	}

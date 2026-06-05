@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env emerald
 #
 # Author: Elliot Kohlmyer
 # Date: April 29th, 2026

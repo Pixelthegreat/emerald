@@ -16,6 +16,7 @@
  *   - W: wide string data pointer
  *   - l: list
  *   - m: map
+ *   - M: dictionary
  *   - b: byte array
  *   - B: byte array view
  * The '*' character works like a regex zero or more

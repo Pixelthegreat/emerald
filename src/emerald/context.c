@@ -511,7 +511,7 @@ EM_API em_value_t em_context_visit_map(em_context_t *context, em_node_t *node) {
 
 		/* set item */
 		em_hash_t hash = em_value_hash(key, &key_node->pos);
-		em_map_set(map, hash, value);
+		em_map_set_key(map, key, hash, value);
 
 		em_value_delete(key);
 		cur = value_node->next;
@@ -857,7 +857,7 @@ EM_API em_value_t em_context_visit_let(em_context_t *context, em_node_t *node) {
 	for (size_t i = 0; i < (index_node? ntokens: ntokens-1); i++) {
 
 		em_token_t *token = em_node_get_token(node, i);
-		em_hash_t hash = em_utf8_strhash(token->value);
+		em_hash_t hash = em_node_get_value(node, i).v.te_hash;
 
 		if (!i) container = em_context_get_value(context, hash);
 		else container = em_value_get_by_hash(container, hash, &token->pos);
@@ -877,6 +877,7 @@ EM_API em_value_t em_context_visit_let(em_context_t *context, em_node_t *node) {
 		prevname = token->value;
 	}
 	em_token_t *name_token = em_node_get_token(node, ntokens-1);
+	em_hash_t name_hash = em_node_get_value(node, ntokens-1).v.te_hash;
 
 	/* set value */
 	if (index_node) {
@@ -891,18 +892,14 @@ EM_API em_value_t em_context_visit_let(em_context_t *context, em_node_t *node) {
 			return EM_VALUE_FAIL;
 		}
 	}
-	else {
+	else if (em_value_set_by_hash(container, name_hash, value, &node->pos) != EM_RESULT_SUCCESS) {
 
-		em_hash_t hash = em_utf8_strhash(name_token->value);
-		if (em_value_set_by_hash(container, hash, value, &node->pos) != EM_RESULT_SUCCESS) {
+		if (!em_log_catch(NULL))
+			em_log_runtime_error(&node->pos, "Attribute '%s' not defined", name_token->value);
 
-			if (!em_log_catch(NULL))
-				em_log_runtime_error(&node->pos, "Attribute '%s' not defined", name_token->value);
-
-			em_value_delete(index);
-			em_value_delete(value);
-			return EM_VALUE_FAIL;
-		}
+		em_value_delete(index);
+		em_value_delete(value);
+		return EM_VALUE_FAIL;
 	}
 
 	em_value_delete(index);

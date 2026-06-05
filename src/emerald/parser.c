@@ -853,6 +853,10 @@ EM_API em_node_t *em_parser_let_statement(em_parser_t *parser) {
 	em_node_t *node = em_node_new(EM_NODE_TYPE_LET, &token->pos);
 	em_node_add_token(node, name);
 
+	em_generic_t hash_value = {.te_hash = em_utf8_strhash(name->value)};
+	em_node_add_value(node, hash_value);
+
+	/* member accesses */
 	while (parser->token->type == EM_TOKEN_TYPE_DOT) {
 
 		em_parser_advance(parser);
@@ -863,6 +867,10 @@ EM_API em_node_t *em_parser_let_statement(em_parser_t *parser) {
 			return NULL;
 		}
 		em_node_add_token(node, parser->token);
+
+		hash_value.te_hash = em_utf8_strhash(parser->token->value);
+		em_node_add_value(node, hash_value);
+
 		em_parser_advance(parser);
 	}
 

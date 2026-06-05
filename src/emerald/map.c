@@ -5,6 +5,7 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <emerald/core.h>
 #include <emerald/log.h>
 #include <emerald/hash.h>
@@ -21,7 +22,7 @@ static em_result_t set_by_index(em_value_t a, em_value_t i, em_value_t b, em_pos
 static em_value_t call(em_context_t *context, em_value_t v, em_value_t *args, size_t nargs, em_pos_t *pos);
 static em_value_t to_string(em_value_t v, em_pos_t *pos);
 
-em_object_type_t type = {
+static em_object_type_t type = {
 	.get_by_hash = get_by_hash,
 	.get_by_index = get_by_index,
 	.set_by_hash = set_by_hash,
@@ -54,7 +55,7 @@ static em_result_t set_by_hash(em_value_t a, em_hash_t hash, em_value_t b, em_po
 static em_result_t set_by_index(em_value_t a, em_value_t i, em_value_t b, em_pos_t *pos) {
 
 	em_hash_t hash = em_value_hash(i, pos);
-	em_map_set(a, hash, b);
+	em_map_set_key(a, i, hash, b);
 	return EM_RESULT_SUCCESS;
 }
 
@@ -91,6 +92,7 @@ static void map_free(void *p) {
 
 		em_map_entry_t *next = entry->next;
 
+		em_value_decref(entry->key);
 		em_value_decref(entry->value);
 		em_free(entry);
 
@@ -113,23 +115,27 @@ EM_API em_value_t em_map_new(void) {
 	return value;
 }
 
-/* set value */
-EM_API void em_map_set(em_value_t object, em_hash_t key, em_value_t value) {
+/* set value with key */
+EM_API void em_map_set_key(em_value_t object, em_value_t key, em_hash_t key_hash, em_value_t value) {
 
 	em_map_t *map = EM_MAP(EM_OBJECT_FROM_VALUE(object));
 
 	em_map_entry_t *entry = map->first;
 	while (entry) {
 
-		if (entry->key == key || !EM_VALUE_OK(entry->value))
+		if (entry->key_hash == key_hash || !EM_VALUE_OK(entry->value))
 			break;
 		entry = entry->next;
 	}
+
+	/* create entry */
 	if (!entry) {
 
 		entry = em_malloc(sizeof(em_map_entry_t));
+		memset(entry, 0, sizeof(em_map_entry_t));
 
-		entry->key = key;
+		entry->key = EM_VALUE_FAIL;
+		entry->key_hash = key_hash;
 		entry->value = EM_VALUE_FAIL;
 		entry->previous = map->last;
 		entry->next = NULL;
@@ -141,10 +147,24 @@ EM_API void em_map_set(em_value_t object, em_hash_t key, em_value_t value) {
 	if (em_value_is(entry->value, value))
 		return;
 
+	/* set values */
+	entry->key_hash = key_hash;
 	em_value_decref(entry->value);
-	entry->key = key;
 	entry->value = value;
 	em_value_incref(value);
+
+	if (!em_value_is(entry->key, key)) {
+
+		em_value_decref(entry->key);
+		entry->key = key;
+		em_value_incref(key);
+	}
+}
+
+/* set value with key hash */
+EM_API void em_map_set(em_value_t object, em_hash_t key, em_value_t value) {
+
+	em_map_set_key(object, EM_VALUE_FAIL, key, value);
 }
 
 /* get value */
@@ -155,7 +175,7 @@ EM_API em_value_t em_map_get(em_value_t object, em_hash_t key) {
 	em_map_entry_t *entry = map->first;
 	while (entry) {
 
-		if (entry->key == key && EM_VALUE_OK(entry->value))
+		if (entry->key_hash == key && EM_VALUE_OK(entry->value))
 			break;
 		entry = entry->next;
 	}
@@ -186,8 +206,10 @@ EM_API void em_map_soft_reset(em_value_t object) {
 	em_map_entry_t *entry = map->first;
 	while (entry) {
 
+		em_value_decref(entry->key);
 		em_value_decref(entry->value);
-		entry->key = 0;
+		entry->key = EM_VALUE_FAIL;
+		entry->key_hash = 0;
 		entry->value = EM_VALUE_FAIL;
 		entry = entry->next;
 	}
@@ -203,7 +225,7 @@ EM_API em_value_t em_map_copy(em_value_t object) {
 	em_map_entry_t *entry = map->first;
 	while (entry) {
 
-		em_map_set(new, entry->key, entry->value);
+		em_map_set_key(new, entry->key, entry->key_hash, entry->value);
 		entry = entry->next;
 	}
 	return new;
