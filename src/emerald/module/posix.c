@@ -283,16 +283,9 @@ static em_result_t initialize(em_context_t *context, em_value_t map) {
 	SET_FLAG(mod, IGNCR);
 	SET_FLAG(mod, ICRNL);
 	SET_FLAG(mod, IXON);
-	SET_FLAG(mod, IXANY);
 	SET_FLAG(mod, IXOFF);
 
 	SET_FLAG(mod, OPOST);
-	SET_FLAG(mod, ONLCR);
-	SET_FLAG(mod, OCRNL);
-	SET_FLAG(mod, ONOCR);
-	SET_FLAG(mod, ONLRET);
-	SET_FLAG(mod, OFILL);
-	SET_FLAG(mod, OFDEL);
 
 	SET_FLAG(mod, CSIZE);
 	SET_FLAG(mod, CS5);
