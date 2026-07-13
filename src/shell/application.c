@@ -25,6 +25,7 @@ enum {
 	OPT_LOG_INFO,
 	OPT_LOG_WARNING,
 	OPT_LOG_FATAL,
+	OPT_USE_BYTECODE,
 
 	OPT_NO_EXIT_FREE,
 	OPT_NO_PRINT_ALLOCS,
@@ -35,6 +36,7 @@ enum {
 	OPT_LOG_INFO_BIT = 0x2,
 	OPT_LOG_WARNING_BIT = 0x4,
 	OPT_LOG_FATAL_BIT = 0x8,
+	OPT_USE_BYTECODE_BIT = 0x10,
 
 	OPT_NO_EXIT_FREE_BIT = 0x10000,
 	OPT_NO_PRINT_ALLOCS_BIT = 0x20000,
@@ -70,6 +72,10 @@ static em_result_t parse_args(int argc, const char **argv) {
 			/* log fatal messages */
 			else if (!strcmp(arg, "-lf") || !strcmp(arg, "--log-fatal"))
 				opt_flags |= OPT_LOG_FATAL_BIT;
+
+			/* use bytecode interpreter */
+			else if (!strcmp(arg, "-b") || !strcmp(arg, "--use-bytecode"))
+				opt_flags |= OPT_USE_BYTECODE_BIT;
 
 			/* don't free objects after program execution */
 			else if (!strcmp(arg, "--no-exit-free"))
@@ -114,6 +120,7 @@ static void print_help(const char *progname) {
 	       "    -li|--log-info     Log info, warning and fatal messages\n"
 	       "    -lw|--log-warning  Log warning and fatal messages\n"
 	       "    -lf|--log-fatal    Log fatal messages\n"
+	       "    -b|--use-bytecode  Use bytecode interpreter (experimental)\n"
 	       "\nArguments:\n"
 	       "    filename           The name of the file to run\n",
 	       progname);
@@ -207,8 +214,18 @@ EM_API em_result_t shell_application_run(int argc, const char **argv) {
 		return EM_RESULT_FAILURE;
 
 	/* interpret file or stdin */
-	if (!arg_filename) repl();
+	if (!arg_filename) {
+
+		if (opt_flags & OPT_USE_BYTECODE_BIT) {
+
+			em_log_fatal("Can't use bytecode mode in interactive shell");
+			return EM_RESULT_FAILURE;
+		}
+		repl();
+	}
 	else {
+		if (opt_flags & OPT_USE_BYTECODE_BIT)
+			context.mode = EM_CODE_TYPE_BINARY;
 		em_value_t res = em_context_run_file(&context, NULL, arg_filename);
 
 		if (em_log_catch(&em_class_system_exit))

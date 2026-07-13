@@ -7,7 +7,7 @@
 #define EMERALD_FUNCTION_H
 
 #include <emerald/core.h>
-#include <emerald/node.h>
+#include <emerald/bytecode.h>
 #include <emerald/object.h>
 
 #define EM_FUNCTION_MAX_ARGUMENTS 32 /* arbitrary maximum */
@@ -26,8 +26,7 @@ typedef struct em_builtin_function {
 /* function */
 typedef struct em_function {
 	em_object_t base;
-	em_node_t *function_node; /* main function node */
-	em_node_t *body_node; /* function body node */
+	em_code_t *body; /* code of function body */
 	const char *name; /* function name */
 	size_t nargnames; /* number of argument names */
 	const char *argnames[]; /* argument names */
@@ -37,7 +36,7 @@ typedef struct em_function {
 
 /* functions */
 EM_API em_value_t em_builtin_function_new(const char *name, em_builtin_function_handler_t handler); /* create builtin function */
-EM_API em_value_t em_function_new(em_node_t *function_node, em_node_t *body_node, const char *name, size_t nargnames, const char **argnames); /* create function */
+EM_API em_value_t em_function_new(em_code_t *body, const char *name, size_t nargnames, const char **argnames); /* create function */
 
 EM_API em_bool_t em_is_builtin_function(em_value_t v); /* check if value is builtin function */
 EM_API em_bool_t em_is_function(em_value_t v); /* check if value is function */

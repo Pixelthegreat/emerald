@@ -52,6 +52,8 @@ typedef enum em_result {
 #define EM_RESULT_TO_CODE(r) ((int)((r) >> 8) & 0xff)
 
 /* helper macros */
+#define EM_ALIGN(x, sz) (((x) + ((sz)-1)) & ~((sz)-1))
+
 #define EM_MIN(a, b) ((a) < (b)? (a): (b))
 #define EM_MAX(a, b) ((a) > (b)? (a): (b))
 #define EM_CLAMP(x, a, b) EM_MIN(EM_MAX((x), (a)), (b))

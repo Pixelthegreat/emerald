@@ -44,6 +44,11 @@ newoption {
 	description = 'Build static library instead of shared',
 }
 
+newoption {
+	trigger = 'enable-bytecode-debug',
+	description = 'Enable debugging for bytecode compiler',
+}
+
 -- Determine module list --
 em_modules = {
 	'array',
@@ -92,6 +97,9 @@ filter 'configurations:release'
 
 filter 'options:enable-asan'
 	sanitize {'Address'}
+
+filter 'options:enable-bytecode-debug'
+	defines {'EM_BYTECODE_DEBUG'}
 
 -- Core emerald interpreter --
 project 'emerald'

@@ -10,13 +10,16 @@
 #include <emerald/lexer.h>
 #include <emerald/parser.h>
 #include <emerald/value.h>
+#include <emerald/bytecode.h>
 
 /* context */
 #define EM_CONTEXT_MAX_DIRS 32
 #define EM_CONTEXT_MAX_SCOPE 128
+#define EM_CONTEXT_MAX_STACK 1024
 
 typedef struct em_recfile {
 	struct em_recfile *next; /* next entry */
+	em_code_slice_t slice; /* bytecode slice */
 	char rpath[]; /* real file path */
 } em_recfile_t;
 
@@ -32,6 +35,18 @@ typedef struct em_context {
 	em_recfile_t *rec_first; /* first run file */
 	em_recfile_t *rec_last; /* last run file */
 	em_value_t pass; /* value to pass down for return statement */
+	em_code_type_t mode; /* tree-walker or bytecode vm */
+	em_value_t stack[EM_CONTEXT_MAX_STACK]; /* value stack */
+	size_t sp; /* stack position */
+	struct {
+		uint32_t level; /* 1 = error, 2 = call, 3 = loop */
+		size_t pos; /* position in respective slice */
+		size_t sp; /* stack position */
+	} cstack[EM_CONTEXT_MAX_STACK]; /* saved context stack */
+	size_t csp; /* context stack position */
+	em_code_op_t op_mode; /* operation mode */
+	em_pos_t op_pos; /* current position */
+	size_t file_level; /* depth in files */
 } em_context_t;
 
 #define EM_CONTEXT_INIT ((em_context_t){EM_FALSE})
@@ -47,6 +62,9 @@ EM_API em_result_t em_context_push_scope(em_context_t *context); /* push scope t
 EM_API void em_context_pop_scope(em_context_t *context); /* pop scope from stack */
 EM_API void em_context_set_value(em_context_t *context, em_hash_t key, em_value_t value); /* set value in current scope */
 EM_API em_value_t em_context_get_value(em_context_t *context, em_hash_t key); /* get value from current scope */
+EM_API void em_context_push_value(em_context_t *context, em_value_t value); /* push value to stack */
+EM_API em_value_t em_context_pop_value(em_context_t *context); /* pop value from stack */
+EM_API void em_context_push_context(em_context_t *context, uint32_t level, size_t pos, size_t sp); /* save context to context stack */
 EM_API em_value_t em_context_run_file(em_context_t *context, em_pos_t *pos, const char *path); /* run code from file */
 
 EM_API em_value_t em_context_visit(em_context_t *context, em_node_t *node); /* visit node */

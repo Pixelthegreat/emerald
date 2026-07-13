@@ -63,6 +63,7 @@ typedef struct em_node {
 	struct em_node *next; /* next sibling */
 	em_array_t tokens; /* saved tokens */
 	em_array_t values; /* saved values */
+	size_t code_size; /* size of bytecode including children */
 } em_node_t;
 
 #define EM_NODE(p) ((em_node_t *)(p))

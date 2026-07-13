@@ -33,7 +33,7 @@ typedef struct em_class {
 
 /* functions */
 EM_API em_value_t em_method_new(em_value_t binding, em_value_t function); /* create bound method */
-EM_API em_value_t em_class_new(em_node_t *node, const char *name, em_value_t base, em_value_t map); /* create class */
+EM_API em_value_t em_class_new(const char *name, em_value_t base, em_value_t map); /* create class */
 
 EM_API em_bool_t em_is_method(em_value_t v); /* check if value is method */
 EM_API em_bool_t em_is_class(em_value_t v); /* check if value is class */

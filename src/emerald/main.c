@@ -23,6 +23,8 @@ EM_API em_bool_t em_print_allocation_traffic;
 em_reflist_t em_reflist_token = EM_REFLIST_INIT;
 em_reflist_t em_reflist_node = EM_REFLIST_INIT;
 em_reflist_t em_reflist_object = EM_REFLIST_INIT;
+em_reflist_t em_reflist_code = EM_REFLIST_INIT;
+
 em_value_t em_none = EM_VALUE_FAIL;
 
 em_value_t em_class_error = EM_VALUE_FAIL;
@@ -65,7 +67,7 @@ static em_value_t error_toString(em_context_t *context, em_value_t *args, size_t
 /* create error class */
 static em_value_t create_error_class(const char *name, em_value_t base) {
 
-	em_value_t class = em_class_new(NULL, name, base, em_map_new());
+	em_value_t class = em_class_new(name, base, em_map_new());
 	em_value_incref(class);
 
 	em_util_set_class_method(class, "_initialize", error_initialize);
@@ -111,6 +113,9 @@ EM_API em_result_t em_init(em_init_flag_t flags) {
 	if (em_reflist_init(&em_reflist_object) != EM_RESULT_SUCCESS)
 		return EM_RESULT_FAILURE;
 
+	if (em_reflist_init(&em_reflist_code) != EM_RESULT_SUCCESS)
+		return EM_RESULT_FAILURE;
+
 	em_none = em_none_new();
 	em_value_incref(em_none);
 
@@ -132,11 +137,17 @@ EM_API void em_quit(void) {
 	em_value_decref(em_class_runtime_error);
 	em_value_decref(em_class_syntax_error);
 	em_value_decref(em_class_error);
+
 	em_value_decref(em_none);
+
+	em_reflist_destroy(&em_reflist_code);
+
 	if (!(init_flags & EM_INIT_FLAG_NO_EXIT_FREE))
 		em_reflist_destroy(&em_reflist_object);
+
 	em_reflist_destroy(&em_reflist_node);
 	em_reflist_destroy(&em_reflist_token);
+
 	if (!(init_flags & EM_INIT_FLAG_NO_PRINT_ALLOCS))
 		em_print_allocs();
 }

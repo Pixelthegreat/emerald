@@ -86,6 +86,7 @@ EM_API em_result_t em_context_init(em_context_t *context, const char **argv) {
 		em_log_fatal("Context already initialized");
 		return EM_RESULT_FAILURE;
 	}
+	memset(context, 0, sizeof(em_context_t));
 
 	context->argv = argv;
 	context->lexer = EM_LEXER_INIT;
@@ -133,6 +134,11 @@ EM_API em_result_t em_context_init(em_context_t *context, const char **argv) {
 	context->rec_first = NULL;
 	context->rec_last = NULL;
 	context->pass = EM_VALUE_FAIL;
+	context->mode = EM_CODE_TYPE_TREE;
+
+	context->sp = 0;
+	context->csp = 0;
+	context->op_mode = EM_CODE_OP_CALL;
 
 	context->init = EM_TRUE;
 	return EM_RESULT_SUCCESS;
@@ -173,8 +179,82 @@ EM_API em_value_t em_context_run_text(em_context_t *context, const char *path, c
 	em_node_t *node = context->parser.node;
 	EM_NODE_INCREF(node);
 
-	em_value_t result = em_context_visit(context, node);
+	em_value_t result = EM_VALUE_FAIL;
 
+	/* tree-walk node */
+	if (context->mode == EM_CODE_TYPE_TREE)
+		result = em_context_visit(context, node);
+
+	/* compile and interpret bytecode */
+	else {
+		em_code_slice_t slice = {0};
+		em_code_compiler_t compiler = {0};
+		compiler.slice = &slice;
+
+		slice.length = em_code_get_size(&compiler, node);
+
+		slice.data = em_malloc(slice.length);
+		memset(slice.data, 0, slice.length);
+
+		compiler.pos.line = 0;
+		compiler.pos.column = 0;
+		compiler.slice = &slice;
+
+		em_code_write(&compiler, node);
+		slice.position = 0;
+
+		context->rec_last->slice = slice;
+
+		/* print hex dump */
+#ifdef EM_BYTECODE_DEBUG
+		printf("length: 0x%zx\n\n", slice.length);
+		for (size_t i = 0; i < EM_ALIGN(slice.length, 16) / 16; i++) {
+
+			printf("%08x  ", i * 16);
+			for (size_t j = 0; j < 16; j++) {
+
+				size_t p = i * 16 + j;
+				uint8_t v = p < slice.length? *(uint8_t *)(slice.data+p): 0;
+
+				if (j == 8) fputc(' ', stdout);
+				printf("%02x ", v);
+			}
+			fputs(" |", stdout);
+
+			for (size_t j = 0; j < 16; j++) {
+
+				size_t p = i * 16 + j;
+				uint8_t v = p < slice.length? *(uint8_t *)(slice.data+p): 0;
+
+				if (v >= ' ' && v <= '~')
+					printf("%c", (char)v);
+				else fputc('.', stdout);
+			}
+			fputs("|\n", stdout);
+		}
+		fputc('\n', stdout);
+		em_code_disassemble(&slice, stdout);
+#endif
+		/* run bytecode */
+		context->file_level++;
+
+		em_pos_t old_pos = context->op_pos;
+		context->op_pos = (em_pos_t){
+			.path = path,
+			.text = NULL,
+			.line = 0,
+			.column = 0,
+		};
+		result = em_code_run_slice(context, &slice);
+
+		if (context->mode == EM_CODE_OP_RSTR2 && context->file_level == 1)
+			em_log_runtime_error(&context->op_pos, "Not in a function");
+
+		else if (context->mode == EM_CODE_OP_RSTR3 && context->file_level == 1)
+			em_log_runtime_error(&context->op_pos, "Not in a loop");
+
+		context->file_level--;
+	}
 	EM_NODE_DECREF(node);
 
 	remove_text(text);
@@ -293,6 +373,33 @@ EM_API em_value_t em_context_get_value(em_context_t *context, em_hash_t key) {
 	return EM_VALUE_FAIL;
 }
 
+/* push value to stack */
+EM_API void em_context_push_value(em_context_t *context, em_value_t value) {
+
+	if (context->sp < EM_CONTEXT_MAX_STACK)
+		context->stack[context->sp++] = value;
+}
+
+/* pop value from stack */
+EM_API em_value_t em_context_pop_value(em_context_t *context) {
+
+	if (context->sp) return context->stack[--context->sp];
+	return EM_VALUE_FAIL;
+}
+
+/* save context to context stack */
+EM_API void em_context_push_context(em_context_t *context, uint32_t level, size_t pos, size_t sp) {
+
+	if (context->csp < EM_CONTEXT_MAX_STACK) {
+
+		size_t i = context->csp++;
+
+		context->cstack[i].level = level;
+		context->cstack[i].pos = pos;
+		context->cstack[i].sp = sp;
+	}
+}
+
 /* run code from file */
 EM_API em_value_t em_context_run_file(em_context_t *context, em_pos_t *pos, const char *path) {
 
@@ -351,10 +458,16 @@ EM_API em_value_t em_context_run_file(em_context_t *context, em_pos_t *pos, cons
 
 	/* make file record */
 	size_t reclen = strlen(rpath);
+
 	recfile = em_malloc(sizeof(em_recfile_t)+reclen+1);
+	memset(recfile, 0, sizeof(em_recfile_t)+reclen+1);
+
 	memcpy(recfile->rpath, rpath, reclen);
-	recfile->rpath[reclen] = 0;
-	recfile->next = NULL;
+
+	/* add file to run list */
+	if (!context->rec_first) context->rec_first = recfile;
+	if (context->rec_last) context->rec_last->next = recfile;
+	context->rec_last = recfile;
 
 	/* run code */
 	em_value_t result = em_context_run_text(context, recfile->rpath, fbuf, (em_ssize_t)len);
@@ -366,12 +479,6 @@ EM_API em_value_t em_context_run_file(em_context_t *context, em_pos_t *pos, cons
 		(void)em_context_popdir(context);
 		em_free(buf);
 	}
-
-	/* add file to run list */
-	if (!context->rec_first) context->rec_first = recfile;
-	if (context->rec_last) context->rec_last->next = recfile;
-	context->rec_last = recfile;
-	
 	return result;
 }
 
@@ -544,7 +651,8 @@ EM_API em_value_t em_context_visit_unary_operation(em_context_t *context, em_nod
 		result = EM_VALUE_FAIL;
 	}
 
-	em_value_delete(right);
+	if (!em_value_is(result, right))
+		em_value_delete(right);
 	return result;
 }
 
@@ -627,8 +735,8 @@ EM_API em_value_t em_context_visit_binary_operation(em_context_t *context, em_no
 		result = em_value_is_true(left, &node->pos);
 		if (!result.value.te_inttype) {
 
-			result = em_context_visit(context, right_node);
-			if (EM_VALUE_OK(result)) result = em_value_is_true(result, &node->pos);
+			right = em_context_visit(context, right_node);
+			if (EM_VALUE_OK(right)) result = em_value_is_true(right, &node->pos);
 		}
 	}
 
@@ -637,8 +745,8 @@ EM_API em_value_t em_context_visit_binary_operation(em_context_t *context, em_no
 		result = em_value_is_true(left, &node->pos);
 		if (result.value.te_inttype) {
 
-			result = em_context_visit(context, right_node);
-			if (EM_VALUE_OK(result)) result = em_value_is_true(result, &node->pos);
+			right = em_context_visit(context, right_node);
+			if (EM_VALUE_OK(right)) result = em_value_is_true(right, &node->pos);
 		}
 	}
 
@@ -685,6 +793,7 @@ EM_API em_value_t em_context_visit_access(em_context_t *context, em_node_t *node
 			em_log_runtime_error(&node->pos, "Attribute '%s' not defined", name_token->value);
 	}
 
+	em_value_delete(container);
 	em_value_delete(index);
 	return value;
 }
@@ -1024,7 +1133,7 @@ EM_API em_value_t em_context_visit_for(em_context_t *context, em_node_t *node) {
 				em_log_clear();
 				break;
 			}
-			else return EM_VALUE_FAIL;
+			return EM_VALUE_FAIL;
 		}
 
 		/* update i */
@@ -1171,7 +1280,9 @@ EM_API em_value_t em_context_visit_func(em_context_t *context, em_node_t *node) 
 	}
 
 	/* set value */
-	em_value_t value = em_function_new(node, body_node, name, nargnames, argnames);
+	em_code_t *code = em_code_new_node(body_node, node->pos.path);
+
+	em_value_t value = em_function_new(code, name, nargnames, argnames);
 	if (node->flags) em_context_set_value(context, em_utf8_strhash(name), value);
 
 	return value;
@@ -1218,7 +1329,7 @@ EM_API em_value_t em_context_visit_class(em_context_t *context, em_node_t *node)
 	}
 
 	em_value_t map = em_map_copy(context->scopestack[context->nscopestack-1]);
-	em_value_t class = em_class_new(node, name_token->value, base, map);
+	em_value_t class = em_class_new(name_token->value, base, map);
 
 	em_context_pop_scope(context);
 
@@ -1306,6 +1417,10 @@ EM_API void em_context_destroy(em_context_t *context) {
 	while (recfile) {
 
 		em_recfile_t *next = recfile->next;
+
+		if (recfile->slice.data)
+			em_free(recfile->slice.data);
+
 		em_free(recfile);
 		recfile = next;
 	}

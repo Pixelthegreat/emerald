@@ -67,6 +67,7 @@ EM_API em_token_t *em_token_new(em_token_type_t type, em_pos_t *pos, const char 
 	if (value) memcpy(token->value, value, len);
 	else memset(token->value, 0, len);
 	token->value[len] = 0;
+	token->length = len;
 
 	return token;
 }

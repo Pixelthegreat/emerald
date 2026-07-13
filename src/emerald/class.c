@@ -146,7 +146,6 @@ static void class_free(void *p) {
 
 	em_value_decref(class->map);
 	em_value_decref(class->clsbase);
-	EM_NODE_DECREF(class->node);
 }
 
 /* create bound method */
@@ -166,18 +165,16 @@ EM_API em_value_t em_method_new(em_value_t binding, em_value_t function) {
 }
 
 /* create class */
-EM_API em_value_t em_class_new(em_node_t *node, const char *name, em_value_t base, em_value_t map) {
+EM_API em_value_t em_class_new(const char *name, em_value_t base, em_value_t map) {
 
 	em_value_t value = em_object_new(&class_type, sizeof(em_class_t));
 	em_class_t *class = EM_CLASS(EM_OBJECT_FROM_VALUE(value));
 
 	EM_REFOBJ(class)->free = class_free;
 
-	EM_NODE_INCREF(node);
 	em_value_incref(base);
 	em_value_incref(map);
 
-	class->node = node;
 	class->name = name;
 	class->clsbase = base;
 	class->map = map;

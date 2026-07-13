@@ -63,6 +63,7 @@ typedef struct em_token {
 	struct em_token *next; /* next token */
 	em_token_type_t type; /* token type */
 	em_pos_t pos; /* token position */
+	size_t length; /* value length */
 	char value[]; /* token value */
 } em_token_t;
 

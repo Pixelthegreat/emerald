@@ -69,7 +69,7 @@ static em_value_t call(struct em_context *context, em_value_t v, em_value_t *arg
 	for (size_t i = 0; i < nargs; i++)
 		em_context_set_value(context, em_utf8_strhash(function->argnames[i]), args[i]);
 
-	em_value_t result = em_context_visit(context, function->body_node);
+	em_value_t result = em_code_run(function->body, context);
 
 	/* pop_scope may or may not delete result, so prevent it from doing so */
 	em_value_incref(result);
@@ -103,7 +103,7 @@ static void function_free(void *p) {
 
 	em_function_t *function = EM_FUNCTION(p);
 
-	EM_NODE_DECREF(function->function_node);
+	EM_CODE_DECREF(function->body);
 }
 
 /* create builtin function */
@@ -119,15 +119,14 @@ EM_API em_value_t em_builtin_function_new(const char *name, em_builtin_function_
 }
 
 /* create function */
-EM_API em_value_t em_function_new(em_node_t *function_node, em_node_t *body_node, const char *name, size_t nargnames, const char **argnames) {
+EM_API em_value_t em_function_new(em_code_t *body, const char *name, size_t nargnames, const char **argnames) {
 
 	em_value_t value = em_object_new(&type, sizeof(em_function_t) + nargnames * sizeof(const char *));
 	em_function_t *function = EM_FUNCTION(EM_OBJECT_FROM_VALUE(value));
 
 	EM_REFOBJ(function)->free = function_free;
 
-	function->function_node = EM_NODE_INCREF(function_node);
-	function->body_node = body_node;
+	function->body = body;
 	function->name = name;
 	function->nargnames = nargnames;
 	memcpy(function->argnames, argnames, nargnames * sizeof(const char *));
