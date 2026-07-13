@@ -651,6 +651,9 @@ EM_API em_node_t *em_parser_factor(em_parser_t *parser) {
 		em_node_t *node = em_node_new(EM_NODE_TYPE_FOR, &token->pos);
 		em_node_add_token(node, name);
 
+		em_generic_t hash_value = {.te_hash = em_utf8_strhash(name->value)};
+		em_node_add_value(node, hash_value);
+
 		if (parser->token->type != EM_TOKEN_TYPE_EQUALS) {
 
 			em_log_syntax_error(&parser->token->pos, "Expected '='");
@@ -729,6 +732,9 @@ EM_API em_node_t *em_parser_factor(em_parser_t *parser) {
 		em_node_t *node = em_node_new(EM_NODE_TYPE_FOREACH, &token->pos);
 		em_node_add_token(node, name);
 		em_node_add_child(node, expr);
+
+		em_generic_t hash_value = {.te_hash = em_utf8_strhash(name->value)};
+		em_node_add_value(node, hash_value);
 
 		/* body */
 		if (!em_token_matches(parser->token, EM_TOKEN_TYPE_KEYWORD, "then")) {

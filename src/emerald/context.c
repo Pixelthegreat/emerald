@@ -1110,7 +1110,7 @@ EM_API em_value_t em_context_visit_for(em_context_t *context, em_node_t *node) {
 
 	/* evaluate body */
 	em_value_t result = em_none;
-	em_hash_t hash = em_utf8_strhash(name_token->value);
+	em_hash_t hash = em_node_get_value(node, 0).v.te_hash;
 
 	for (em_inttype_t i = start.value.te_inttype; i < end.value.te_inttype; i++) {
 
@@ -1155,6 +1155,7 @@ EM_API em_value_t em_context_visit_foreach(em_context_t *context, em_node_t *nod
 	em_token_t *name_token = em_node_get_token(node, 0);
 	em_node_t *iterable_node = node->first;
 	em_node_t *body_node = iterable_node->next;
+	em_hash_t hash = em_node_get_value(node, 0).v.te_hash;
 
 	em_value_t iterable = em_context_visit(context, iterable_node);
 	if (!EM_VALUE_OK(iterable)) return EM_VALUE_FAIL;
@@ -1180,7 +1181,7 @@ EM_API em_value_t em_context_visit_foreach(em_context_t *context, em_node_t *nod
 			em_value_delete(iterable);
 			return EM_VALUE_FAIL;
 		}
-		em_context_set_value(context, em_utf8_strhash(name_token->value), value);
+		em_context_set_value(context, hash, value);
 
 		result = em_context_visit(context, body_node);
 		if (!EM_VALUE_OK(result)) {
