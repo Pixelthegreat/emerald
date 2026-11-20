@@ -56,7 +56,8 @@ EM_API em_result_t em_array_add(em_array_t *array, em_generic_t value) {
 /* get array value */
 EM_API em_generic_result_t em_array_get(em_array_t *array, size_t index) {
 
-	if (!array || !array->init || index >= array->nitems) return EM_GENERIC_NONE;
+	if (!array || !array->init || index >= array->nitems)
+		return EM_GENERIC_NONE;
 
 	em_generic_result_t res = {.p = EM_TRUE};
 

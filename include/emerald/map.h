@@ -12,17 +12,15 @@
 /* map entry */
 typedef struct em_map_entry {
 	em_value_t key; /* key value (not always present) */
-	em_hash_t key_hash; /* hashed key */
 	em_value_t value; /* entry value */
-	struct em_map_entry *previous; /* previous entry */
-	struct em_map_entry *next; /* next entry */
+	em_hash_t key_hash; /* hashed key */
 } em_map_entry_t;
 
 /* map */
 typedef struct em_map {
 	em_object_t base;
-	em_map_entry_t *first; /* first entry */
-	em_map_entry_t *last; /* last entry */
+	em_map_entry_t *entries; /* entries list */
+	size_t count, capacity; /* bookkeeping */
 	void *userdata; /* user data */
 } em_map_t;
 

@@ -14,6 +14,104 @@
 #include <emerald/context.h>
 #include <emerald/map.h>
 
+/* print layout (debug) */
+static void print_layout(em_map_t *map) {
+
+	printf("layout:");
+	for (size_t i = 0; i < map->capacity; i++) {
+
+		if (i % 4 == 0) fputc('\n', stdout);
+		else fputs("  ", stdout);
+
+		printf(
+			"%04zx: \e[90m%08x\e[39m",
+			i, map->entries[i].key_hash
+		);
+	}
+	fputc('\n', stdout);
+}
+
+/* grow map capacity */
+static em_map_entry_t *create_entry(em_map_t *map, em_hash_t hash, em_bool_t regrow);
+
+static void grow_map(em_map_t *map) {
+
+	em_map_entry_t *old_entries = map->entries;
+	size_t old_capacity = map->capacity;
+
+	if (!map->capacity)
+		map->capacity = 16;
+	else
+		map->capacity *= 2;
+	map->count = 0;
+
+	size_t size = sizeof(em_map_entry_t) * map->capacity;
+
+	map->entries = (em_map_entry_t *)malloc(size);
+	memset(map->entries, 0, size);
+
+	/* copy old entries */
+	if (!old_entries) return;
+
+	for (size_t i = 0; i < old_capacity; i++) {
+
+		em_map_entry_t *old = old_entries+i;
+		em_map_entry_t *new = create_entry(
+			map, old->key_hash, EM_FALSE
+		);
+		new->key = old->key;
+		new->key_hash = old->key_hash;
+		new->value = old->value;
+	}
+	free(old_entries);
+}
+
+/* get or create entry */
+static em_map_entry_t *create_entry(em_map_t *map, em_hash_t hash, em_bool_t regrow) {
+
+	if (regrow && map->count >= map->capacity * 3 / 4)
+		grow_map(map);
+
+	/* check remaining keys */
+	size_t index = (size_t)hash & (map->capacity - 1);
+	size_t start = index;
+	do {
+		if (map->entries[index].key_hash == hash)
+			return map->entries+index;
+
+		else if (!map->entries[index].key_hash) {
+
+			map->entries[index].key_hash = hash;
+			map->count++;
+			return map->entries+index;
+		}
+		index = (index + 1) & (map->capacity - 1);
+
+	} while (index != start);
+	return NULL;
+}
+
+/* get entry */
+static em_map_entry_t *get_entry(em_map_t *map, em_hash_t hash) {
+
+	if (!map->capacity)
+		return NULL;
+
+	size_t index = (size_t)hash & (map->capacity - 1);
+	size_t start = index;
+	do {
+		if (map->entries[index].key_hash == hash &&
+		    EM_VALUE_OK(map->entries[index].value))
+			return map->entries+index;
+		else if (!map->entries[index].key_hash)
+			return NULL;
+
+		index = (index + 1) & (map->capacity - 1);
+
+	} while (index != start);
+	return NULL;
+}
+
 /* object type */
 static em_value_t get_by_hash(em_value_t v, em_hash_t hash, em_pos_t *pos);
 static em_value_t get_by_index(em_value_t v, em_value_t i, em_pos_t *pos);
@@ -87,17 +185,17 @@ static void map_free(void *p) {
 
 	em_map_t *map = EM_MAP(p);
 
-	em_map_entry_t *entry = map->first;
-	while (entry) {
+	for (size_t i = 0; i < map->capacity; i++) {
 
-		em_map_entry_t *next = entry->next;
+		em_map_entry_t *entry = map->entries+i;
+		if (!entry->key_hash)
+			continue;
 
 		em_value_decref(entry->key);
 		em_value_decref(entry->value);
-		em_free(entry);
-
-		entry = next;
 	}
+	if (map->entries)
+		free(map->entries);
 }
 
 /* create map */
@@ -108,9 +206,9 @@ EM_API em_value_t em_map_new(void) {
 
 	EM_REFOBJ(map)->free = map_free;
 
-	map->first = NULL;
-	map->last = NULL;
-	map->userdata = NULL;
+	map->entries = NULL;
+	map->count = 0;
+	map->capacity = 0;
 
 	return value;
 }
@@ -120,29 +218,7 @@ EM_API void em_map_set_key(em_value_t object, em_value_t key, em_hash_t key_hash
 
 	em_map_t *map = EM_MAP(EM_OBJECT_FROM_VALUE(object));
 
-	em_map_entry_t *entry = map->first;
-	while (entry) {
-
-		if (entry->key_hash == key_hash || !EM_VALUE_OK(entry->value))
-			break;
-		entry = entry->next;
-	}
-
-	/* create entry */
-	if (!entry) {
-
-		entry = em_malloc(sizeof(em_map_entry_t));
-		memset(entry, 0, sizeof(em_map_entry_t));
-
-		entry->key = EM_VALUE_FAIL;
-		entry->key_hash = key_hash;
-		entry->value = EM_VALUE_FAIL;
-		entry->previous = map->last;
-		entry->next = NULL;
-		if (!map->first) map->first = entry;
-		if (map->last) map->last->next = entry;
-		map->last = entry;
-	}
+	em_map_entry_t *entry = create_entry(map, key_hash, EM_TRUE);
 
 	if (em_value_is(entry->value, value))
 		return;
@@ -172,29 +248,9 @@ EM_API em_value_t em_map_get(em_value_t object, em_hash_t key) {
 
 	em_map_t *map = EM_MAP(EM_OBJECT_FROM_VALUE(object));
 
-	em_map_entry_t *entry = map->first;
-	while (entry) {
-
-		if (entry->key_hash == key && EM_VALUE_OK(entry->value))
-			break;
-		entry = entry->next;
-	}
+	em_map_entry_t *entry = get_entry(map, key);
 	if (!entry) return EM_VALUE_FAIL;
 
-	/* move entry to front */
-	if (entry != map->first) {
-
-		if (entry == map->last)
-			map->last = entry->previous;
-		if (entry->previous) entry->previous->next = entry->next;
-		if (entry->next) entry->next->previous = entry->previous;
-
-		entry->previous = NULL;
-		entry->next = map->first;
-		if (!map->last) map->last = entry;
-		if (map->first) map->first->previous = entry;
-		map->first = entry;
-	}
 	return entry->value;
 }
 
@@ -203,15 +259,17 @@ EM_API void em_map_soft_reset(em_value_t object) {
 
 	em_map_t *map = EM_MAP(EM_OBJECT_FROM_VALUE(object));
 
-	em_map_entry_t *entry = map->first;
-	while (entry) {
+	for (size_t i = 0; i < map->capacity; i++) {
+
+		em_map_entry_t *entry = map->entries+i;
+		if (!entry->key_hash)
+			continue;
 
 		em_value_decref(entry->key);
 		em_value_decref(entry->value);
 		entry->key = EM_VALUE_FAIL;
 		entry->key_hash = 0;
 		entry->value = EM_VALUE_FAIL;
-		entry = entry->next;
 	}
 }
 
@@ -222,11 +280,12 @@ EM_API em_value_t em_map_copy(em_value_t object) {
 
 	em_value_t new = em_map_new();
 
-	em_map_entry_t *entry = map->first;
-	while (entry) {
+	for (size_t i = 0; i < map->capacity; i++) {
 
+		em_map_entry_t *entry = map->entries+i;
+		if (!entry->key_hash)
+			continue;
 		em_map_set_key(new, entry->key, entry->key_hash, entry->value);
-		entry = entry->next;
 	}
 	return new;
 }

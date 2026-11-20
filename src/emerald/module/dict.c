@@ -94,10 +94,10 @@ static void dict_free(void *p) {
 
 	em_dict_t *dict = EM_DICT(p);
 
-	em_map_entry_t *entry = dict->first;
+	em_dict_entry_t *entry = dict->first;
 	while (entry) {
 
-		em_map_entry_t *next = entry->next;
+		em_dict_entry_t *next = entry->next;
 
 		em_value_decref(entry->key);
 		em_value_decref(entry->value);
@@ -122,15 +122,14 @@ EM_API em_value_t em_dict_new(em_value_t map) {
 	/* copy values from map */
 	if (!em_is_map(map))
 		return value;
-
 	em_map_t *p_map = EM_MAP(EM_OBJECT_FROM_VALUE(map));
-	em_map_entry_t *entry = p_map->first;
 
-	while (entry) {
+	for (size_t i = 0; i < p_map->capacity; i++) {
 
-		if (EM_VALUE_OK(entry->key))
-			em_dict_set(value, entry->key, entry->key_hash, entry->value);
-		entry = entry->next;
+		em_map_entry_t *entry = p_map->entries+i;
+		if (!entry->key_hash || !EM_VALUE_OK(entry->key))
+			continue;
+		em_dict_set(value, entry->key, entry->key_hash, entry->value);
 	}
 	return value;
 }
@@ -140,7 +139,7 @@ EM_API void em_dict_set(em_value_t object, em_value_t key, em_hash_t key_hash, e
 
 	em_dict_t *dict = EM_DICT(EM_OBJECT_FROM_VALUE(object));
 
-	em_map_entry_t *entry = dict->first;
+	em_dict_entry_t *entry = dict->first;
 	while (entry) {
 
 		if (entry->key_hash == key_hash)
@@ -151,12 +150,11 @@ EM_API void em_dict_set(em_value_t object, em_value_t key, em_hash_t key_hash, e
 	/* create entry */
 	if (!entry) {
 
-		entry = em_malloc(sizeof(em_map_entry_t));
-		memset(entry, 0, sizeof(em_map_entry_t));
+		entry = em_malloc(sizeof(em_dict_entry_t));
+		memset(entry, 0, sizeof(em_dict_entry_t));
 
 		entry->key = EM_VALUE_FAIL;
 		entry->value = EM_VALUE_FAIL;
-		entry->previous = dict->last;
 		entry->next = NULL;
 		if (!dict->first) dict->first = entry;
 		if (dict->last) dict->last->next = entry;
@@ -187,7 +185,7 @@ EM_API em_value_t em_dict_get(em_value_t object, em_hash_t key_hash) {
 
 	em_dict_t *dict = EM_DICT(EM_OBJECT_FROM_VALUE(object));
 
-	em_map_entry_t *entry = dict->first;
+	em_dict_entry_t *entry = dict->first;
 	while (entry) {
 
 		if (entry->key_hash == key_hash)
@@ -352,7 +350,7 @@ EM_API em_value_t em_dict_iterator_new(em_value_t dict) {
 
 	/* copy key and value pairs */
 	size_t index = 0;
-	em_map_entry_t *entry = p_dict->first;
+	em_dict_entry_t *entry = p_dict->first;
 
 	while (entry) {
 

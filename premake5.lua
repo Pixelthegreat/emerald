@@ -28,6 +28,11 @@ newoption {
 }
 
 newoption {
+	trigger = 'enable-profiling',
+	description = 'Enable performance profiling (implies --build-static)',
+}
+
+newoption {
 	trigger = 'enable-modules',
 	value = 'MODULE1,MODULE2,...',
 	description = 'Enable specific modules only (default is all)',
@@ -98,6 +103,9 @@ filter 'configurations:release'
 filter 'options:enable-asan'
 	sanitize {'Address'}
 
+filter 'options:enable-profiling'
+	profile 'on'
+
 filter 'options:enable-bytecode-debug'
 	defines {'EM_BYTECODE_DEBUG'}
 
@@ -127,7 +135,7 @@ project 'emerald'
 	io.writefile('obj/modules.h', string.format('%s\n%s', em_module_proto, em_module_table))
 
 	-- Configuration filters --
-	filter 'options:build-static'
+	filter 'options:build-static or options:enable-profiling'
 		kind 'StaticLib'
 
 -- Emerald shell --

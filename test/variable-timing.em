@@ -1,12 +1,18 @@
 #!/usr/bin/env emerald
 #
 # Author: Elliot Kohlmyer
-# Date: July 10th, 2026
+# Date: November 20th, 2026
 # Purpose: Test program execution time
 #
-let valueList = [0]
+include 'em/rand.em'
 
-for i = 0 to 1000000 then
-	let valueList[0] = i
-	valueList[0]
+let rng = rand.createRNG()
+
+let alphabet = 'abcdefghijklmnopqrstuvwxyz'
+let map = {}
+
+for i = 0 to 10000 then
+	let name = alphabet[rng.nextInteger(0, 26)] + alphabet[rng.nextInteger(0, 26)]
+	let map[name] = i
+	map[name]
 end

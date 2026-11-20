@@ -13,12 +13,20 @@
 
 EM_API em_module_t em_module_dict;
 
+/* dictionary entry */
+typedef struct em_dict_entry {
+	em_value_t key; /* key value */
+	em_value_t value; /* entry value */
+	struct em_dict_entry *next; /* next entry */
+	em_hash_t key_hash; /* hashed key */
+} em_dict_entry_t;
+
 /* dictionary */
 typedef struct em_dict {
 	em_object_t base;
 	size_t count; /* number of items */
-	em_map_entry_t *first; /* first entry */
-	em_map_entry_t *last; /* last entry */
+	em_dict_entry_t *first; /* first entry */
+	em_dict_entry_t *last; /* last entry */
 } em_dict_t;
 
 #define EM_DICT(p) ((em_dict_t *)(p))

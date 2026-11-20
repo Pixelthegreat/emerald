@@ -72,15 +72,22 @@ static void copy_values(em_class_t *class, em_value_t instance) {
 	if (EM_VALUE_OK(class->clsbase))
 		copy_values(EM_CLASS(EM_OBJECT_FROM_VALUE(class->clsbase)), instance);
 
-	em_map_entry_t *entry = EM_MAP(EM_OBJECT_FROM_VALUE(class->map))->first;
-	while (entry) {
+	em_map_t *p_map = EM_MAP(EM_OBJECT_FROM_VALUE(class->map));
+
+	for (size_t i = 0; i < p_map->capacity; i++) {
+
+		em_map_entry_t *entry = p_map->entries+i;
+		if (!entry->key_hash)
+			continue;
 
 		if (em_is_function(entry->value) ||
 		    em_is_builtin_function(entry->value))
-			em_map_set(instance, entry->key_hash, em_method_new(instance, entry->value));
+			em_map_set(
+				instance,
+				entry->key_hash,
+				em_method_new(instance, entry->value)
+			);
 		else em_map_set(instance, entry->key_hash, entry->value);
-
-		entry = entry->next;
 	}
 }
 
