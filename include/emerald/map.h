@@ -14,13 +14,14 @@ typedef struct em_map_entry {
 	em_value_t key; /* key value (not always present) */
 	em_value_t value; /* entry value */
 	em_hash_t key_hash; /* hashed key */
-} em_map_entry_t;
+} __attribute__((packed)) em_map_entry_t;
 
 /* map */
 typedef struct em_map {
 	em_object_t base;
 	em_map_entry_t *entries; /* entries list */
-	size_t count, capacity; /* bookkeeping */
+	size_t count, capacity; /* size */
+	size_t load_factor; /* bookkeeping */
 	void *userdata; /* user data */
 } em_map_t;
 

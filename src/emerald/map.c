@@ -44,6 +44,7 @@ static void grow_map(em_map_t *map) {
 	else
 		map->capacity *= 2;
 	map->count = 0;
+	map->load_factor = (map->capacity >> 3) * 5;
 
 	size_t size = sizeof(em_map_entry_t) * map->capacity;
 
@@ -69,7 +70,7 @@ static void grow_map(em_map_t *map) {
 /* get or create entry */
 static em_map_entry_t *create_entry(em_map_t *map, em_hash_t hash, em_bool_t regrow) {
 
-	if (regrow && map->count >= map->capacity * 3 / 4)
+	if (regrow && map->count >= map->load_factor)
 		grow_map(map);
 
 	/* check remaining keys */
@@ -209,6 +210,7 @@ EM_API em_value_t em_map_new(void) {
 	map->entries = NULL;
 	map->count = 0;
 	map->capacity = 0;
+	map->load_factor = 0;
 
 	return value;
 }
@@ -271,6 +273,7 @@ EM_API void em_map_soft_reset(em_value_t object) {
 		entry->key_hash = 0;
 		entry->value = EM_VALUE_FAIL;
 	}
+	map->count = 0;
 }
 
 /* copy map */
