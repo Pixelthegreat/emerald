@@ -151,6 +151,50 @@ static em_value_t math_clamp(em_context_t *context, em_value_t *args, size_t nar
 	return EM_VALUE_FLOAT(EM_CLAMP(ft_v, ft_a, ft_b));
 }
 
+/* raise value to power */
+static em_value_t math_pow(em_context_t *context, em_value_t *args, size_t nargs, em_pos_t *pos) {
+
+	em_floattype_t ft_a, ft_b;
+
+	if (em_util_parse_args(pos, args, nargs, "NN", &ft_a, &ft_b) != EM_RESULT_SUCCESS)
+		return EM_VALUE_FAIL;
+
+	return EM_VALUE_FLOAT(pow(ft_a, ft_b));
+}
+
+/* get square root of value */
+static em_value_t math_sqrt(em_context_t *context, em_value_t *args, size_t nargs, em_pos_t *pos) {
+
+	em_floattype_t ft_v;
+
+	if (em_util_parse_args(pos, args, nargs, "N", &ft_v) != EM_RESULT_SUCCESS)
+		return EM_VALUE_FAIL;
+
+	return EM_VALUE_FLOAT(sqrt(ft_v));
+}
+
+/* get cube root of value */
+static em_value_t math_cbrt(em_context_t *context, em_value_t *args, size_t nargs, em_pos_t *pos) {
+
+	em_floattype_t ft_v;
+
+	if (em_util_parse_args(pos, args, nargs, "N", &ft_v) != EM_RESULT_SUCCESS)
+		return EM_VALUE_FAIL;
+
+	return EM_VALUE_FLOAT(cbrt(ft_v));
+}
+
+/* get hypotenuse (sqrt(a ** 2 + b ** 2)) */
+static em_value_t math_hypot(em_context_t *context, em_value_t *args, size_t nargs, em_pos_t *pos) {
+
+	em_floattype_t ft_a, ft_b;
+
+	if (em_util_parse_args(pos, args, nargs, "NN", &ft_a, &ft_b) != EM_RESULT_SUCCESS)
+		return EM_VALUE_FAIL;
+
+	return EM_VALUE_FLOAT(hypot(ft_a, ft_b));
+}
+
 /* initialize module */
 static em_result_t initialize(em_context_t *context, em_value_t map) {
 
@@ -175,6 +219,10 @@ static em_result_t initialize(em_context_t *context, em_value_t map) {
 	em_util_set_function(mod, "min", math_min);
 	em_util_set_function(mod, "max", math_max);
 	em_util_set_function(mod, "clamp", math_clamp);
+	em_util_set_function(mod, "pow", math_pow);
+	em_util_set_function(mod, "sqrt", math_sqrt);
+	em_util_set_function(mod, "cbrt", math_cbrt);
+	em_util_set_function(mod, "hypot", math_hypot);
 
 	return EM_RESULT_SUCCESS;
 }
