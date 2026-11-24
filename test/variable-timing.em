@@ -8,6 +8,6 @@ let alphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@
 let map = {}
 
 for i = 0 to 100000 then
-	let map[alphabet[i % lengthOf(alphabet)]] = i
-	map[alphabet[i % lengthOf(alphabet)]]
+	let map[alphabet[i % 72]] = i
+	map[alphabet[i % 72]]
 end

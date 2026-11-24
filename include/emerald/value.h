@@ -29,7 +29,6 @@ typedef struct em_value {
 
 #define EM_VALUE_INT(v) ((em_value_t){.type = EM_VALUE_TYPE_INT, .value.te_inttype = (v)})
 #define EM_VALUE_FLOAT(v) ((em_value_t){.type = EM_VALUE_TYPE_FLOAT, .value.te_floattype = (v)})
-#define EM_VALUE_INT_INV(v) ((v).type == EM_VALUE_TYPE_INT? (em_value_t){.type = EM_VALUE_TYPE_INT, .value.te_inttype = !(v).value.te_inttype}: (v))
 
 #define EM_VALUE_OK(v) ((v).type != EM_VALUE_TYPE_NONE)
 
@@ -43,6 +42,7 @@ EM_API void em_value_incref(em_value_t v); /* increase reference count */
 EM_API void em_value_decref(em_value_t v); /* decrease reference count */
 EM_API void em_value_delete(em_value_t v); /* delete if reference count is zero */
 EM_API void em_value_decref_no_free(em_value_t v); /* decrease reference count without freeing */
+EM_API em_value_t em_value_int_inv(em_value_t v); /* invert integer value */
 EM_API em_bool_t em_value_is(em_value_t a, em_value_t b); /* compare exact equality */
 EM_API em_value_t em_value_is_true(em_value_t v, em_pos_t *pos); /* get truthiness of value */
 EM_API em_value_t em_value_add(em_value_t a, em_value_t b, em_pos_t *pos); /* add values */

@@ -645,7 +645,7 @@ EM_API em_value_t em_context_visit_unary_operation(em_context_t *context, em_nod
 	else if (token->type == EM_TOKEN_TYPE_BITWISE_NOT)
 		result = em_value_not(right, &node->pos);
 	else if (!strcmp(token->value, "not"))
-		result = EM_VALUE_INT_INV(em_value_is_true(right, &node->pos));
+		result = em_value_int_inv(em_value_is_true(right, &node->pos));
 	else {
 		em_log_runtime_error(&node->pos, "Unsupported operation ('%s')", token->value);
 		result = EM_VALUE_FAIL;
@@ -715,19 +715,19 @@ EM_API em_value_t em_context_visit_binary_operation(em_context_t *context, em_no
 		result = em_value_compare_equal(left, right, &node->pos);
 
 	else if (token->type == EM_TOKEN_TYPE_NOT_EQUALS)
-		result = EM_VALUE_INT_INV(em_value_compare_equal(left, right, &node->pos));
+		result = em_value_int_inv(em_value_compare_equal(left, right, &node->pos));
 
 	else if (token->type == EM_TOKEN_TYPE_LESS_THAN)
 		result = em_value_compare_less_than(left, right, &node->pos);
 
 	else if (token->type == EM_TOKEN_TYPE_LESS_THAN_EQUALS)
-		result = EM_VALUE_INT_INV(em_value_compare_greater_than(left, right, &node->pos));
+		result = em_value_int_inv(em_value_compare_greater_than(left, right, &node->pos));
 
 	else if (token->type == EM_TOKEN_TYPE_GREATER_THAN)
 		result = em_value_compare_greater_than(left, right, &node->pos);
 
 	else if (token->type == EM_TOKEN_TYPE_GREATER_THAN_EQUALS)
-		result = EM_VALUE_INT_INV(em_value_compare_less_than(left, right, &node->pos));
+		result = em_value_int_inv(em_value_compare_less_than(left, right, &node->pos));
 
 	/* special case to not evaluate value for and and or */
 	else if (!strcmp(token->value, "or")) {

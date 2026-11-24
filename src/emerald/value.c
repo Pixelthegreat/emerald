@@ -463,6 +463,14 @@ EM_API void em_value_decref_no_free(em_value_t v) {
 		EM_OBJECT_DECREF_NO_FREE(v.value.t_voidp);
 }
 
+/* invert integer value */
+EM_API em_value_t em_value_int_inv(em_value_t v) {
+
+	if (v.type != EM_VALUE_TYPE_INT)
+		return v;
+	return EM_VALUE_INT(!v.value.te_inttype);
+}
+
 /* compare exact equality */
 EM_API em_bool_t em_value_is(em_value_t a, em_value_t b) {
 

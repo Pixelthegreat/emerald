@@ -385,6 +385,44 @@ static em_value_t os_getTrackedMemoryUsage(em_context_t *context, em_value_t *ar
 	return EM_VALUE_INT((em_inttype_t)em_memory_usage);
 }
 
+/* measure time of function call */
+static em_value_t os_timeOf(em_context_t *context, em_value_t *args, size_t nargs, em_pos_t *pos) {
+
+	em_value_t value;
+
+	if (em_util_parse_args(pos, args, nargs, "vv*", &value) != EM_RESULT_SUCCESS)
+		return EM_VALUE_FAIL;
+	args++; nargs--;
+
+#if defined EM_WINDOWS
+
+#elif defined EM_ECLAIR
+
+#else
+	struct timespec ts_start, ts_end;
+	clock_gettime(CLOCK_MONOTONIC, &ts_start);
+
+	em_value_t result = em_value_call(context, value, args, nargs, pos);
+
+	clock_gettime(CLOCK_MONOTONIC, &ts_end);
+
+	if (!EM_VALUE_OK(result))
+		return EM_VALUE_FAIL;
+	em_value_delete(result);
+
+	em_floattype_t f_start =
+		(em_floattype_t)ts_start.tv_sec +
+		(em_floattype_t)ts_start.tv_nsec / 1000000000.0;
+
+	em_floattype_t f_end =
+		(em_floattype_t)ts_end.tv_sec +
+		(em_floattype_t)ts_end.tv_nsec / 1000000000.0;
+
+	return EM_VALUE_FLOAT(f_end - f_start);
+#endif
+	return em_none;
+}
+
 /* initialize module */
 static em_result_t initialize(em_context_t *context, em_value_t map) {
 
@@ -417,6 +455,7 @@ static em_result_t initialize(em_context_t *context, em_value_t map) {
 	em_util_set_function(mod, "closeFile", os_closeFile);
 
 	em_util_set_function(mod, "getTrackedMemoryUsage", os_getTrackedMemoryUsage);
+	em_util_set_function(mod, "timeOf", os_timeOf);
 
 	return EM_RESULT_SUCCESS;
 }

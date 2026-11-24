@@ -1602,12 +1602,30 @@ EM_API void em_code_run_inst(em_context_t *context, em_code_slice_t *slice) {
 			em_context_push_value(context, a);
 			break;
 
+		/* construct map */
+		case EM_CODE_OP_CMAP:
+			count = (size_t)em_code_read_uint16(slice);
+			a = em_map_new();
+
+			for (size_t i = 0; i < count; i++) {
+
+				b = context->stack[context->sp - count * 2 + i * 2];
+				c = context->stack[context->sp - count * 2 + i * 2 + 1];
+
+				em_hash_t hash = em_value_hash(b, &context->op_pos);
+				em_map_set_key(a, b, hash, c);
+			}
+			for (size_t i = 0; i < count * 2; i++)
+				em_value_delete(em_context_pop_value(context));
+			em_context_push_value(context, a);
+			break;
+
 		/* unary operations */
 		case EM_CODE_OP_UNEG:
 			UNARY_OPERATION(multiply(a, EM_VALUE_INT(-1), &context->op_pos));
 			break;
 		case EM_CODE_OP_UNOT:
-			UNARY_OPERATION(is_true(a, &context->op_pos), b = EM_VALUE_INT_INV(b));
+			UNARY_OPERATION(is_true(a, &context->op_pos), b = em_value_int_inv(b));
 			break;
 		case EM_CODE_OP_UBNOT:
 			UNARY_OPERATION(not(a, &context->op_pos));
@@ -1654,7 +1672,7 @@ EM_API void em_code_run_inst(em_context_t *context, em_code_slice_t *slice) {
 			BINARY_OPERATION(compare_equal);
 			break;
 		case EM_CODE_OP_BNEQ:
-			BINARY_OPERATION(compare_equal, c = EM_VALUE_INT_INV(c));
+			BINARY_OPERATION(compare_equal, c = em_value_int_inv(c));
 			break;
 		case EM_CODE_OP_BLT:
 			BINARY_OPERATION(compare_less_than);
